@@ -1,0 +1,4 @@
+- add score works
+- reload keeps data
+- charts update
+- mobile OK

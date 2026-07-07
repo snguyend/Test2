@@ -1,0 +1,1 @@
+Dashboard → Select Student → Add Score → See Chart → Set Goal

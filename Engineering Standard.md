@@ -1,0 +1,4 @@
+- use TypeScript everywhere
+- small reusable components
+- no complex architecture
+- UI must be responsive
