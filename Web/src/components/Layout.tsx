@@ -1,4 +1,6 @@
 import { NavLink, Outlet } from 'react-router-dom'
+import CollapsibleSection from './CollapsibleSection'
+import { useAppData } from '../store'
 
 const links = [
   { to: '/', label: 'Dashboard', icon: '🏠', end: true },
@@ -9,29 +11,86 @@ const links = [
 ]
 
 export default function Layout() {
+  const { students } = useAppData()
+
   return (
     <div className="app">
-      <header className="app-header">
-        <span className="logo">🎓 Education Growth</span>
-      </header>
+      <aside className="sidebar">
+        <div className="sidebar-brand">
+          <span className="logo">🎓 Education Growth</span>
+          <span className="tagline">Family learning tracker</span>
+        </div>
+
+        <nav className="nav">
+          {links.map((link) => (
+            <NavLink
+              key={link.to}
+              to={link.to}
+              end={link.end}
+              className={({ isActive }) => (isActive ? 'nav-item active' : 'nav-item')}
+            >
+              <span className="nav-icon">{link.icon}</span>
+              <span className="nav-label">{link.label}</span>
+            </NavLink>
+          ))}
+        </nav>
+
+        <div className="sidebar-sections">
+          <CollapsibleSection title="Children" icon="👨‍👩‍👧‍👦" defaultOpen>
+            <ul className="side-list">
+              {students.map((s) => (
+                <li key={s.id}>
+                  <NavLink
+                    to={`/students/${s.id}`}
+                    className={({ isActive }) => (isActive ? 'side-link active' : 'side-link')}
+                  >
+                    <span className="dot" style={{ background: s.color }} />
+                    {s.name}
+                  </NavLink>
+                </li>
+              ))}
+            </ul>
+          </CollapsibleSection>
+
+          <CollapsibleSection title="Quick Actions" icon="⚡">
+            <ul className="side-list">
+              <li>
+                <NavLink to="/add-score" className="side-link">
+                  ➕ Add a score
+                </NavLink>
+              </li>
+              <li>
+                <NavLink to="/progress" className="side-link">
+                  📈 View progress
+                </NavLink>
+              </li>
+              <li>
+                <NavLink to="/goals" className="side-link">
+                  🏆 Manage goals
+                </NavLink>
+              </li>
+            </ul>
+          </CollapsibleSection>
+
+          <CollapsibleSection title="Score Legend" icon="🎯">
+            <ul className="legend">
+              <li>
+                <span className="legend-swatch good" /> 85 – 100 · Excellent
+              </li>
+              <li>
+                <span className="legend-swatch ok" /> 70 – 84 · On track
+              </li>
+              <li>
+                <span className="legend-swatch low" /> 0 – 69 · Needs focus
+              </li>
+            </ul>
+          </CollapsibleSection>
+        </div>
+      </aside>
 
       <main className="content">
         <Outlet />
       </main>
-
-      <nav className="nav">
-        {links.map((link) => (
-          <NavLink
-            key={link.to}
-            to={link.to}
-            end={link.end}
-            className={({ isActive }) => (isActive ? 'nav-item active' : 'nav-item')}
-          >
-            <span className="nav-icon">{link.icon}</span>
-            <span className="nav-label">{link.label}</span>
-          </NavLink>
-        ))}
-      </nav>
     </div>
   )
 }

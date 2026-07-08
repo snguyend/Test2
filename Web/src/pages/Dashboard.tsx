@@ -7,6 +7,13 @@ export default function Dashboard() {
 
   return (
     <div className="page">
+      <section className="hero">
+        <div className="hero-text">
+          <h1>Welcome back 👋</h1>
+          <p>Track your children's learning journey, celebrate wins, and set new goals.</p>
+        </div>
+      </section>
+
       <h1>Dashboard</h1>
       <p className="muted">A quick look at how everyone is doing.</p>
 

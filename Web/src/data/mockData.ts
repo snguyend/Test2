@@ -3,14 +3,14 @@ import type { Goal, Reward, ScoreEntry, Student } from '../types'
 export const students: Student[] = [
   {
     id: 's1',
-    name: 'Nam',
+    name: 'Nguyễn Bảo Hiếu',
     grade: 'Preparing for Grade 8',
     avatar: '👦',
     color: '#2563eb',
   },
   {
     id: 's2',
-    name: 'Mai',
+    name: 'Nguyễn Thị Bảo Hân',
     grade: 'Grade 3',
     avatar: '👧',
     color: '#db2777',
