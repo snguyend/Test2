@@ -1,4 +1,3 @@
-import { useRef } from 'react'
 import { useAppData } from '../store'
 import type { Student } from '../types'
 
@@ -10,15 +9,13 @@ interface AvatarProps {
 
 export default function Avatar({ student, size = 50, editable = false }: AvatarProps) {
   const { photos, setStudentPhoto } = useAppData()
-  const inputRef = useRef<HTMLInputElement>(null)
   const photo = photos[student.id]
 
-  const openPicker = (e: React.MouseEvent) => {
-    if (!editable) return
-    // Prevent parent links/cards from handling the click.
-    e.preventDefault()
-    e.stopPropagation()
-    inputRef.current?.click()
+  const style = {
+    width: size,
+    height: size,
+    fontSize: size * 0.32,
+    background: photo ? '#fff' : student.color,
   }
 
   const handleFile = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -30,23 +27,28 @@ export default function Avatar({ student, size = 50, editable = false }: AvatarP
     e.target.value = '' // allow re-selecting the same file
   }
 
+  const content = photo ? <img src={photo} alt={student.name} /> : student.avatar
+
+  if (!editable) {
+    return (
+      <span className="avatar" style={style}>
+        {content}
+      </span>
+    )
+  }
+
+  // Using a <label> makes the browser open the native file explorer on click,
+  // which is the most reliable cross-browser way to pick a file.
   return (
-    <span
-      className={editable ? 'avatar editable' : 'avatar'}
-      style={{
-        width: size,
-        height: size,
-        fontSize: size * 0.32,
-        background: photo ? '#fff' : student.color,
-      }}
-      onClick={openPicker}
-      title={editable ? 'Click to change photo' : undefined}
+    <label
+      className="avatar editable"
+      style={style}
+      title="Click to change photo"
+      onClick={(e) => e.stopPropagation()}
     >
-      {photo ? <img src={photo} alt={student.name} /> : student.avatar}
-      {editable && <span className="avatar-edit">📷</span>}
-      {editable && (
-        <input ref={inputRef} type="file" accept="image/*" onChange={handleFile} hidden />
-      )}
-    </span>
+      {content}
+      <span className="avatar-edit">📷</span>
+      <input type="file" accept="image/*" onChange={handleFile} hidden />
+    </label>
   )
 }

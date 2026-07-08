@@ -25,11 +25,13 @@ export default function Dashboard() {
           const doneGoals = studentGoals.filter((g) => g.done).length
 
           return (
-            <Link key={student.id} to={`/students/${student.id}`} className="card student-card">
+            <div key={student.id} className="card student-card">
               <div className="student-head">
                 <Avatar student={student} editable />
                 <div>
-                  <h2>{student.name}</h2>
+                  <Link to={`/students/${student.id}`} className="student-name-link">
+                    <h2>{student.name}</h2>
+                  </Link>
                   <span className="muted">{student.grade}</span>
                 </div>
               </div>
@@ -49,7 +51,10 @@ export default function Dashboard() {
                   <span className="stat-label">Goals</span>
                 </div>
               </div>
-            </Link>
+              <Link to={`/students/${student.id}`} className="card-link">
+                View details →
+              </Link>
+            </div>
           )
         })}
       </div>

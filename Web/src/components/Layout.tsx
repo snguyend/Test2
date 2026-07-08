@@ -1,5 +1,6 @@
 import { NavLink, Outlet } from 'react-router-dom'
 import CollapsibleSection from './CollapsibleSection'
+import Settings from './Settings'
 import { useAppData } from '../store'
 
 const links = [
@@ -42,9 +43,12 @@ export default function Layout() {
                 <li key={s.id}>
                   <NavLink
                     to={`/students/${s.id}`}
-                    className={({ isActive }) => (isActive ? 'side-link active' : 'side-link')}
+                    className={({ isActive }) =>
+                      isActive ? 'side-link child-link active' : 'side-link child-link'
+                    }
+                    style={{ ['--c' as string]: s.color } as React.CSSProperties}
                   >
-                    <span className="dot" style={{ background: s.color }} />
+                    <span className="child-avatar">{s.avatar}</span>
                     {s.name}
                   </NavLink>
                 </li>
@@ -86,6 +90,8 @@ export default function Layout() {
             </ul>
           </CollapsibleSection>
         </div>
+
+        <Settings />
       </aside>
 
       <main className="content">

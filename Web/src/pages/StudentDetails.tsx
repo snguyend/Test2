@@ -16,15 +16,20 @@ export default function StudentDetails() {
         <p className="muted">Pick a student to see their details.</p>
         <div className="card-grid">
           {students.map((student) => (
-            <Link key={student.id} to={`/students/${student.id}`} className="card student-card">
+            <div key={student.id} className="card student-card">
               <div className="student-head">
                 <Avatar student={student} editable />
                 <div>
-                  <h2>{student.name}</h2>
+                  <Link to={`/students/${student.id}`} className="student-name-link">
+                    <h2>{student.name}</h2>
+                  </Link>
                   <span className="muted">{student.grade}</span>
                 </div>
               </div>
-            </Link>
+              <Link to={`/students/${student.id}`} className="card-link">
+                Open →
+              </Link>
+            </div>
           ))}
         </div>
       </div>
