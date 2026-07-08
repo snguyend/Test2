@@ -1,4 +1,5 @@
 import { useAppData } from '../store'
+import Avatar from '../components/Avatar'
 
 export default function GoalsRewards() {
   const { students, goals, rewards, toggleGoal } = useAppData()
@@ -14,9 +15,7 @@ export default function GoalsRewards() {
         return (
           <section key={student.id} className="card">
             <div className="student-head">
-              <span className="avatar" style={{ background: student.color }}>
-                {student.avatar}
-              </span>
+              <Avatar student={student} />
               <div>
                 <h2>{student.name}</h2>
                 <span className="muted">{student.grade}</span>

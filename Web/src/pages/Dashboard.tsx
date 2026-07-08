@@ -1,5 +1,6 @@
 import { Link } from 'react-router-dom'
 import { useAppData } from '../store'
+import Avatar from '../components/Avatar'
 import { averageScore } from '../utils/scores'
 
 export default function Dashboard() {
@@ -26,9 +27,7 @@ export default function Dashboard() {
           return (
             <Link key={student.id} to={`/students/${student.id}`} className="card student-card">
               <div className="student-head">
-                <span className="avatar" style={{ background: student.color }}>
-                  {student.avatar}
-                </span>
+                <Avatar student={student} editable />
                 <div>
                   <h2>{student.name}</h2>
                   <span className="muted">{student.grade}</span>

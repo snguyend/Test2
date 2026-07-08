@@ -1,5 +1,6 @@
 import { Link, useParams } from 'react-router-dom'
 import { useAppData } from '../store'
+import Avatar from '../components/Avatar'
 import BarChart from '../components/BarChart'
 import { averageScore, subjectAverages } from '../utils/scores'
 
@@ -17,9 +18,7 @@ export default function StudentDetails() {
           {students.map((student) => (
             <Link key={student.id} to={`/students/${student.id}`} className="card student-card">
               <div className="student-head">
-                <span className="avatar" style={{ background: student.color }}>
-                  {student.avatar}
-                </span>
+                <Avatar student={student} editable />
                 <div>
                   <h2>{student.name}</h2>
                   <span className="muted">{student.grade}</span>
@@ -52,9 +51,7 @@ export default function StudentDetails() {
   return (
     <div className="page">
       <div className="student-head big">
-        <span className="avatar" style={{ background: student.color }}>
-          {student.avatar}
-        </span>
+        <Avatar student={student} size={64} editable />
         <div>
           <h1>{student.name}</h1>
           <span className="muted">{student.grade}</span>
