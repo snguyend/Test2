@@ -55,6 +55,7 @@ export default function StudentDetails() {
         <div>
           <h1>{student.name}</h1>
           <span className="muted">{student.grade}</span>
+          <span className="photo-hint">📷 Click the photo to change it</span>
         </div>
       </div>
 

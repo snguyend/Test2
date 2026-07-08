@@ -374,6 +374,14 @@ body {
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
 }
 
+.photo-hint {
+  display: block;
+  margin-top: 4px;
+  font-size: 0.75rem;
+  color: var(--primary);
+  cursor: default;
+}
+
 .student-head h2,
 .student-head h1 {
   margin: 0;

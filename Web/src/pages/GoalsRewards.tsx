@@ -15,7 +15,7 @@ export default function GoalsRewards() {
         return (
           <section key={student.id} className="card">
             <div className="student-head">
-              <Avatar student={student} />
+              <Avatar student={student} editable />
               <div>
                 <h2>{student.name}</h2>
                 <span className="muted">{student.grade}</span>
