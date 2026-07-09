@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { useAppData } from '../store'
+import { useAppData } from '../store-context'
+import type { ScoreEntry } from '../types'
 
 export default function AddScore() {
   const { students, addScore } = useAppData()
@@ -9,6 +10,7 @@ export default function AddScore() {
   const [studentId, setStudentId] = useState(students[0]?.id ?? '')
   const [subject, setSubject] = useState('')
   const [score, setScore] = useState('')
+  const [semester, setSemester] = useState<ScoreEntry['semester']>('second')
   const [date, setDate] = useState(new Date().toISOString().slice(0, 10))
   const [error, setError] = useState('')
 
@@ -20,12 +22,12 @@ export default function AddScore() {
       setError('Please enter a subject.')
       return
     }
-    if (Number.isNaN(numericScore) || numericScore < 0 || numericScore > 100) {
-      setError('Score must be a number between 0 and 100.')
+    if (Number.isNaN(numericScore) || numericScore < 0 || numericScore > 10) {
+      setError('Score must be a number between 0 and 10.')
       return
     }
 
-    addScore({ studentId, subject: subject.trim(), score: numericScore, date })
+    addScore({ studentId, subject: subject.trim(), score: numericScore, date, semester })
     navigate(`/students/${studentId}`)
   }
 
@@ -57,15 +59,27 @@ export default function AddScore() {
         </label>
 
         <label>
-          Score (0-100)
+          Score (0-10)
           <input
             type="number"
             value={score}
             min={0}
-            max={100}
-            placeholder="e.g. 88"
+            max={10}
+            step={1}
+            placeholder="e.g. 9"
             onChange={(e) => setScore(e.target.value)}
           />
+        </label>
+
+        <label>
+          Semester
+          <select
+            value={semester}
+            onChange={(e) => setSemester(e.target.value as ScoreEntry['semester'])}
+          >
+            <option value="first">First semester</option>
+            <option value="second">Second semester</option>
+          </select>
         </label>
 
         <label>

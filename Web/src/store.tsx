@@ -1,36 +1,32 @@
-import { createContext, useContext, useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import type { ReactNode } from 'react'
-import type { Goal, Reward, ScoreEntry } from './types'
-import { initialGoals, initialRewards, initialScores, students } from './data/mockData'
-
-const PHOTO_KEY = 'eg-student-photos'
-
-function loadPhotos(): Record<string, string> {
-  try {
-    return JSON.parse(localStorage.getItem(PHOTO_KEY) ?? '{}')
-  } catch {
-    return {}
-  }
-}
-
-interface AppState {
-  students: typeof students
-  scores: ScoreEntry[]
-  goals: Goal[]
-  rewards: Reward[]
-  photos: Record<string, string>
-  addScore: (score: Omit<ScoreEntry, 'id'>) => void
-  toggleGoal: (goalId: string) => void
-  setStudentPhoto: (studentId: string, dataUrl: string) => void
-}
-
-const AppContext = createContext<AppState | undefined>(undefined)
+import type { Goal, Reward, ScoreEntry, Student } from './types'
+import { initialGoals, initialRewards, initialScores, students as seedStudents } from './data/mockData'
+import { STORAGE_KEYS, loadState, saveState } from './utils/storage'
+import { MAX_SCORE } from './utils/scores'
+import { AppContext, type AppState } from './store-context'
 
 export function AppProvider({ children }: { children: ReactNode }) {
-  const [scores, setScores] = useState<ScoreEntry[]>(initialScores)
-  const [goals, setGoals] = useState<Goal[]>(initialGoals)
-  const [rewards, setRewards] = useState<Reward[]>(initialRewards)
-  const [photos, setPhotos] = useState<Record<string, string>>(loadPhotos)
+  const [students] = useState<Student[]>(() =>
+    loadState(STORAGE_KEYS.students, seedStudents),
+  )
+  const [scores, setScores] = useState<ScoreEntry[]>(() =>
+    loadState(STORAGE_KEYS.scores, initialScores),
+  )
+  const [goals, setGoals] = useState<Goal[]>(() => loadState(STORAGE_KEYS.goals, initialGoals))
+  const [rewards, setRewards] = useState<Reward[]>(() =>
+    loadState(STORAGE_KEYS.rewards, initialRewards),
+  )
+  const [photos, setPhotos] = useState<Record<string, string>>(() =>
+    loadState(STORAGE_KEYS.photos, {}),
+  )
+
+  // Persist each slice whenever it changes so data survives a reload.
+  useEffect(() => saveState(STORAGE_KEYS.students, students), [students])
+  useEffect(() => saveState(STORAGE_KEYS.scores, scores), [scores])
+  useEffect(() => saveState(STORAGE_KEYS.goals, goals), [goals])
+  useEffect(() => saveState(STORAGE_KEYS.rewards, rewards), [rewards])
+  useEffect(() => saveState(STORAGE_KEYS.photos, photos), [photos])
 
   const value = useMemo<AppState>(
     () => ({
@@ -44,6 +40,26 @@ export function AppProvider({ children }: { children: ReactNode }) {
           ...prev,
           { ...score, id: `sc${Date.now()}` },
         ]),
+      updateScore: (id, score) =>
+        setScores((prev) =>
+          prev.map((s) =>
+            s.id === id ? { ...s, score: Math.max(0, Math.min(MAX_SCORE, Math.round(score))) } : s,
+          ),
+        ),
+      deleteScore: (id) => setScores((prev) => prev.filter((s) => s.id !== id)),
+      setSubjectAverage: (studentId, subject, target) =>
+        setScores((prev) => {
+          const subset = prev.filter((s) => s.studentId === studentId && s.subject === subject)
+          if (subset.length === 0) return prev
+          const currentAvg = subset.reduce((sum, s) => sum + s.score, 0) / subset.length
+          const delta = Math.round(target) - Math.round(currentAvg)
+          if (delta === 0) return prev
+          return prev.map((s) =>
+            s.studentId === studentId && s.subject === subject
+              ? { ...s, score: Math.max(0, Math.min(MAX_SCORE, s.score + delta)) }
+              : s,
+          )
+        }),
       toggleGoal: (goalId) =>
         setGoals((prev) => {
           const goal = prev.find((g) => g.id === goalId)
@@ -56,24 +72,10 @@ export function AppProvider({ children }: { children: ReactNode }) {
           return prev.map((g) => (g.id === goalId ? { ...g, done: !g.done } : g))
         }),
       setStudentPhoto: (studentId, dataUrl) =>
-        setPhotos((prev) => {
-          const next = { ...prev, [studentId]: dataUrl }
-          try {
-            localStorage.setItem(PHOTO_KEY, JSON.stringify(next))
-          } catch {
-            // ignore storage errors (e.g. quota exceeded)
-          }
-          return next
-        }),
+        setPhotos((prev) => ({ ...prev, [studentId]: dataUrl })),
     }),
-    [scores, goals, rewards, photos],
+    [students, scores, goals, rewards, photos],
   )
 
   return <AppContext.Provider value={value}>{children}</AppContext.Provider>
-}
-
-export function useAppData() {
-  const ctx = useContext(AppContext)
-  if (!ctx) throw new Error('useAppData must be used within AppProvider')
-  return ctx
 }

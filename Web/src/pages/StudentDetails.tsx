@@ -1,11 +1,11 @@
 import { Link, useParams } from 'react-router-dom'
-import { useAppData } from '../store'
+import { useAppData } from '../store-context'
 import Avatar from '../components/Avatar'
 import BarChart from '../components/BarChart'
-import { averageScore, subjectAverages } from '../utils/scores'
+import { averageScore, semesterAverage, subjectAverages } from '../utils/scores'
 
 export default function StudentDetails() {
-  const { students, scores, goals } = useAppData()
+  const { students, scores, goals, setSubjectAverage, deleteScore } = useAppData()
   const { id } = useParams()
 
   // Student picker list when no id is selected
@@ -67,7 +67,15 @@ export default function StudentDetails() {
       <div className="stat-row card">
         <div className="stat">
           <span className="stat-value">{averageScore(studentScores)}</span>
-          <span className="stat-label">Avg score</span>
+          <span className="stat-label">Overall avg</span>
+        </div>
+        <div className="stat">
+          <span className="stat-value">{semesterAverage(studentScores, 'first')}</span>
+          <span className="stat-label">1st semester</span>
+        </div>
+        <div className="stat">
+          <span className="stat-value">{semesterAverage(studentScores, 'second')}</span>
+          <span className="stat-label">2nd semester</span>
         </div>
         <div className="stat">
           <span className="stat-value">{studentScores.length}</span>
@@ -81,7 +89,31 @@ export default function StudentDetails() {
 
       <section className="card">
         <h2>Average by subject</h2>
-        <BarChart data={subjectAverages(studentScores)} color={student.color} />
+        <BarChart data={subjectAverages(studentScores)} />
+
+        {subjectAverages(studentScores).length > 0 && (
+          <div className="subject-adjusters">
+            <p className="muted adjuster-hint">
+              Drag to adjust a subject's average (0–10) — recent scores update live.
+            </p>
+            {subjectAverages(studentScores).map(({ label, value }) => (
+              <label key={label} className="adjuster">
+                <span className="adjuster-label">{label}</span>
+                <input
+                  type="range"
+                  min={0}
+                  max={10}
+                  step={1}
+                  value={Math.min(10, Math.round(value))}
+                  onChange={(e) => setSubjectAverage(student.id, label, Number(e.target.value))}
+                  style={{ accentColor: student.color }}
+                  aria-label={`Adjust ${label} average`}
+                />
+                <span className="adjuster-value">{Math.min(10, Math.round(value))}/10</span>
+              </label>
+            ))}
+          </div>
+        )}
       </section>
 
       <section className="card">
@@ -93,17 +125,38 @@ export default function StudentDetails() {
             {recent.map((s) => (
               <li key={s.id} className="list-row">
                 <span>{s.subject}</span>
-                <span className="muted">{s.date}</span>
+                <span className="muted">
+                  {s.date} · {s.semester === 'first' ? '1st' : '2nd'} sem
+                </span>
                 <span className="badge">{s.score}</span>
+                <button
+                  className="row-delete"
+                  onClick={() => deleteScore(s.id)}
+                  aria-label={`Delete ${s.subject} score`}
+                  title="Delete score"
+                >
+                  🗑
+                </button>
               </li>
             ))}
           </ul>
         )}
       </section>
 
-      <Link to="/add-score" className="btn primary">
-        ➕ Add score for {student.name}
-      </Link>
+      <div className="quick-actions">
+        <Link to="/add-score" className="btn primary">
+          ➕ Add score for {student.name}
+        </Link>
+        {studentScores.length > 0 && (
+          <button
+            className="btn danger"
+            onClick={() => deleteScore(recent[0].id)}
+            title="Delete the most recent score"
+          >
+            🗑 Delete latest score
+          </button>
+        )}
+      </div>
     </div>
   )
 }

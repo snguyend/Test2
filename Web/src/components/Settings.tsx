@@ -1,5 +1,5 @@
 import CollapsibleSection from './CollapsibleSection'
-import { TONES, useTheme } from '../theme'
+import { TONES, useTheme } from '../theme-context'
 
 export default function Settings() {
   const { mode, tone, setMode, setTone } = useTheme()

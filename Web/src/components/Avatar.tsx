@@ -1,4 +1,4 @@
-import { useAppData } from '../store'
+import { useAppData } from '../store-context'
 import type { Student } from '../types'
 
 interface AvatarProps {

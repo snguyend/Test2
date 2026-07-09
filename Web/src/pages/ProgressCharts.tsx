@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { useAppData } from '../store'
+import { useAppData } from '../store-context'
 import BarChart from '../components/BarChart'
 import { subjectAverages } from '../utils/scores'
 
@@ -7,7 +7,6 @@ export default function ProgressCharts() {
   const { students, scores } = useAppData()
   const [studentId, setStudentId] = useState(students[0]?.id ?? '')
 
-  const student = students.find((s) => s.id === studentId)
   const studentScores = scores.filter((s) => s.studentId === studentId)
   const timeline = [...studentScores].sort((a, b) => a.date.localeCompare(b.date))
 
@@ -30,14 +29,13 @@ export default function ProgressCharts() {
 
       <section className="card">
         <h2>Average by subject</h2>
-        <BarChart data={subjectAverages(studentScores)} color={student?.color} />
+        <BarChart data={subjectAverages(studentScores)} />
       </section>
 
       <section className="card">
         <h2>Score timeline</h2>
         <BarChart
           data={timeline.map((s) => ({ label: `${s.subject} · ${s.date.slice(5)}`, value: s.score }))}
-          color={student?.color}
         />
       </section>
     </div>

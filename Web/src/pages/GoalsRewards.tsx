@@ -1,4 +1,4 @@
-import { useAppData } from '../store'
+import { useAppData } from '../store-context'
 import Avatar from '../components/Avatar'
 
 export default function GoalsRewards() {

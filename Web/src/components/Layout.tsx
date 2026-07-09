@@ -1,7 +1,10 @@
 import { NavLink, Outlet } from 'react-router-dom'
 import CollapsibleSection from './CollapsibleSection'
 import Settings from './Settings'
-import { useAppData } from '../store'
+import AITutor from './AITutor'
+import Header from './Header'
+import Particles from './Particles'
+import { useAppData } from '../store-context'
 
 const links = [
   { to: '/', label: 'Dashboard', icon: '🏠', end: true },
@@ -17,6 +20,7 @@ export default function Layout() {
   return (
     <div className="app">
       <aside className="sidebar">
+        <Particles className="particles-tall" />
         <div className="sidebar-brand">
           <span className="logo">🎓 Education Growth</span>
           <span className="tagline">Family learning tracker</span>
@@ -79,13 +83,13 @@ export default function Layout() {
           <CollapsibleSection title="Score Legend" icon="🎯">
             <ul className="legend">
               <li>
-                <span className="legend-swatch good" /> 85 – 100 · Excellent
+                <span className="legend-swatch good" /> 9 – 10 · Excellent
               </li>
               <li>
-                <span className="legend-swatch ok" /> 70 – 84 · On track
+                <span className="legend-swatch ok" /> 6 – 8 · On track
               </li>
               <li>
-                <span className="legend-swatch low" /> 0 – 69 · Needs focus
+                <span className="legend-swatch low" /> Under 6 · Needs focus
               </li>
             </ul>
           </CollapsibleSection>
@@ -95,8 +99,11 @@ export default function Layout() {
       </aside>
 
       <main className="content">
+        <Header />
         <Outlet />
       </main>
+
+      <AITutor />
     </div>
   )
 }
