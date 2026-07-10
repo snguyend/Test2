@@ -6,6 +6,7 @@ import AddScore from './pages/AddScore'
 import ProgressCharts from './pages/ProgressCharts'
 import GoalsRewards from './pages/GoalsRewards'
 import About from './pages/About'
+import Courses from './pages/Courses'
 
 export default function App() {
   return (
@@ -18,6 +19,7 @@ export default function App() {
         <Route path="progress" element={<ProgressCharts />} />
         <Route path="goals" element={<GoalsRewards />} />
         <Route path="about" element={<About />} />
+        <Route path="courses" element={<Courses />} />
       </Route>
     </Routes>
   )

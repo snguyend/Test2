@@ -3,7 +3,7 @@ import Particles from './Particles'
 
 const navItems = [
   { label: 'Home', to: '/', end: true },
-  { label: 'Courses', to: '/progress' },
+  { label: 'Courses', to: '/courses' },
   { label: 'About', to: '/about' },
   { label: 'Blog', to: '/goals' },
   { label: 'Contact', to: '/about' },
