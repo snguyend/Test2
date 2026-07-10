@@ -22,7 +22,10 @@ export default function Layout() {
       <aside className="sidebar">
         <Particles className="particles-tall" />
         <div className="sidebar-brand">
-          <span className="logo">🎓 Education Growth</span>
+          <span className="logo">
+            <span className="logo-badge">🎓</span>
+            <span className="logo-text">Education Growth</span>
+          </span>
           <span className="tagline">Family learning tracker</span>
         </div>
 

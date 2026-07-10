@@ -4,6 +4,7 @@ import { useAppData } from '../store-context'
 import Avatar from '../components/Avatar'
 import BarChart from '../components/BarChart'
 import LineChart from '../components/LineChart'
+import Particles from '../components/Particles'
 import { averageScore, subjectAverages } from '../utils/scores'
 
 export default function Dashboard() {
@@ -37,6 +38,7 @@ export default function Dashboard() {
   return (
     <div className="page">
       <section className="hero">
+        <Particles className="particles-hero" />
         <div className="hero-text">
           <h1>Welcome back 👋</h1>
           <p>Track your children's learning journey, celebrate wins, and set new goals.</p>

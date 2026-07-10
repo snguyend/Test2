@@ -9,20 +9,22 @@ export default function Settings() {
       <CollapsibleSection title="Cài Đặt (Setting)" icon="⚙️">
         <div className="setting-group">
           <span className="setting-label">Giao Diện</span>
-          <div className="seg">
-            <button
-              className={mode === 'light' ? 'seg-btn active' : 'seg-btn'}
-              onClick={() => setMode('light')}
-            >
-              ☀️ Sáng
-            </button>
-            <button
-              className={mode === 'dark' ? 'seg-btn active' : 'seg-btn'}
-              onClick={() => setMode('dark')}
-            >
-              🌙 Tối
-            </button>
-          </div>
+          <button
+            type="button"
+            role="switch"
+            aria-checked={mode === 'dark'}
+            aria-label="Toggle light and dark mode"
+            className={`theme-toggle ${mode}`}
+            onClick={() => setMode(mode === 'light' ? 'dark' : 'light')}
+          >
+            <span className="tt-track">
+              <span className="tt-star s1" />
+              <span className="tt-star s2" />
+              <span className="tt-star s3" />
+              <span className="tt-thumb">{mode === 'light' ? '☀️' : '🌙'}</span>
+            </span>
+            <span className="tt-caption">{mode === 'light' ? 'Sáng' : 'Tối'}</span>
+          </button>
         </div>
 
         <div className="setting-group">
