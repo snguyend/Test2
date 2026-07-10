@@ -1500,13 +1500,63 @@ body {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 56px;
-  height: 56px;
+  width: 58px;
+  height: 58px;
   border-radius: 50%;
   font-size: 1.5rem;
-  border: 2px solid var(--primary);
-  color: var(--primary);
+  color: #fff;
   margin-bottom: 4px;
+  background: linear-gradient(135deg, #a855f7, #ec4899 55%, #f97316);
+  background-size: 180% 180%;
+  box-shadow: 0 8px 18px rgba(168, 85, 247, 0.35);
+  animation: contact-float 3.2s ease-in-out infinite, bg-flow 6s ease infinite;
+}
+
+/* Stagger each icon so they float out of sync */
+.contact-card:nth-child(2) .contact-icon {
+  animation-delay: 0.6s, 0s;
+}
+.contact-card:nth-child(3) .contact-icon {
+  animation-delay: 1.2s, 0s;
+}
+
+.contact-card:hover .contact-icon {
+  animation: contact-pop 0.6s ease, bg-flow 6s ease infinite;
+}
+
+@keyframes contact-float {
+  0%,
+  100% {
+    transform: translateY(0) rotate(-4deg);
+  }
+  50% {
+    transform: translateY(-8px) rotate(4deg);
+  }
+}
+
+@keyframes contact-pop {
+  0% {
+    transform: scale(1) rotate(0deg);
+  }
+  40% {
+    transform: scale(1.18) rotate(-10deg);
+  }
+  70% {
+    transform: scale(1.1) rotate(8deg);
+  }
+  100% {
+    transform: scale(1) rotate(0deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .contact-icon {
+    animation: none;
+  }
+  .contact-card:hover .contact-icon {
+    animation: none;
+    transform: scale(1.1);
+  }
 }
 
 .contact-label {
