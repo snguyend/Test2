@@ -5,6 +5,7 @@ import Avatar from '../components/Avatar'
 import BarChart from '../components/BarChart'
 import LineChart from '../components/LineChart'
 import Particles from '../components/Particles'
+import PieChart from '../components/PieChart'
 import { averageScore, subjectAverages } from '../utils/scores'
 
 export default function Dashboard() {
@@ -33,6 +34,22 @@ export default function Dashboard() {
         .sort((a, b) => a.date.localeCompare(b.date))
         .map((s) => ({ label: s.date.slice(5), value: s.score })),
     [filteredScores],
+  )
+
+  // Per-child comparison (respects the semester filter, always shows both children)
+  const byChild = useMemo(
+    () =>
+      students.map((s) => ({
+        label: s.name,
+        avatar: s.avatar,
+        color: s.color,
+        value: averageScore(
+          scores.filter(
+            (sc) => sc.studentId === s.id && (semester === 'all' || sc.semester === semester),
+          ),
+        ),
+      })),
+    [students, scores, semester],
   )
 
   return (
@@ -133,6 +150,11 @@ export default function Dashboard() {
         <section className="card">
           <h3>Progress over time</h3>
           <LineChart data={timeline} color={accent} />
+        </section>
+
+        <section className="card">
+          <h3>Compare children (avg / 10)</h3>
+          <PieChart data={byChild} unit="/10" center="👧👦" />
         </section>
       </div>
 
