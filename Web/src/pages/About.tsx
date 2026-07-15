@@ -16,6 +16,33 @@ const CONTACT_CARDS = [
   },
 ]
 
+const FAQ_ITEMS = [
+  {
+    q: 'What is Education Growth?',
+    a: 'Education Growth is a simple family learning tracker. It helps parents keep all of their children’s school results in one place, so you can see how each child is doing and celebrate their progress together.',
+  },
+  {
+    q: 'Who is this app for?',
+    a: 'It’s made for parents and families who want an easy way to follow their children’s learning at home — no teacher account, no complicated setup. If you can type a score, you can use it.',
+  },
+  {
+    q: 'How do I add and track my children’s scores?',
+    a: 'Go to the “Add Score” page, pick the child, choose the grade and subject, and enter a score from 0 to 10. The Dashboard and each child’s page update automatically so you always see their latest averages.',
+  },
+  {
+    q: 'What do the grades and tabs mean?',
+    a: 'Each score is saved under the school grade it was earned in (for example Grade 8). On a child’s detail page you can switch between grades to see results year by year, which makes it easy to track long-term progress.',
+  },
+  {
+    q: 'How do goals and rewards work?',
+    a: 'You can set simple goals for each child, like “Score 9 in Math.” When a goal is completed you can mark it done and give a reward, which helps keep learning fun and motivating.',
+  },
+  {
+    q: 'Where is my family’s data stored?',
+    a: 'Everything stays in your own browser on this device. There is no sign-up and nothing is sent to a server, so your family’s information stays private to you.',
+  },
+]
+
 export default function About() {
   const [name, setName] = useState('')
   const [email, setEmail] = useState('')
@@ -23,6 +50,7 @@ export default function About() {
   const [message, setMessage] = useState('')
   const [sent, setSent] = useState(false)
   const [error, setError] = useState('')
+  const [openFaq, setOpenFaq] = useState<number | null>(0)
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
@@ -62,7 +90,9 @@ export default function About() {
             target={c.href.startsWith('http') ? '_blank' : undefined}
             rel={c.href.startsWith('http') ? 'noreferrer' : undefined}
           >
-            <span className="contact-icon">{c.icon}</span>
+            <span className="contact-icon">
+              <span className="contact-glyph">{c.icon}</span>
+            </span>
             <span className="contact-label">{c.label}</span>
             <span className="contact-value">{c.value}</span>
           </a>
@@ -123,6 +153,28 @@ export default function About() {
           Submit
         </button>
       </form>
+
+      <section className="faq">
+        <h2 className="faq-title">Frequently asked questions</h2>
+        <div className="faq-list">
+          {FAQ_ITEMS.map((item, i) => {
+            const open = openFaq === i
+            return (
+              <div key={item.q} className={open ? 'faq-item open' : 'faq-item'}>
+                <button
+                  className="faq-question"
+                  onClick={() => setOpenFaq(open ? null : i)}
+                  aria-expanded={open}
+                >
+                  <span>{item.q}</span>
+                  <span className="faq-chevron">{open ? '⌃' : '⌄'}</span>
+                </button>
+                {open && <p className="faq-answer">{item.a}</p>}
+              </div>
+            )
+          })}
+        </div>
+      </section>
     </div>
   )
 }

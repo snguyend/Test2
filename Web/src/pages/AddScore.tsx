@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAppData } from '../store-context'
 import type { ScoreEntry } from '../types'
+import { currentGrade, gradeOptionsFor } from '../utils/grades'
 
 export default function AddScore() {
   const { students, addScore } = useAppData()
@@ -13,6 +14,19 @@ export default function AddScore() {
   const [semester, setSemester] = useState<ScoreEntry['semester']>('second')
   const [date, setDate] = useState(new Date().toISOString().slice(0, 10))
   const [error, setError] = useState('')
+
+  const selectedStudent = students.find((s) => s.id === studentId)
+  const gradeOptions = gradeOptionsFor(studentId)
+  const [grade, setGrade] = useState<number>(() =>
+    selectedStudent ? currentGrade(selectedStudent) : gradeOptions[0],
+  )
+
+  // When the student changes, default the grade to their current grade.
+  const handleStudentChange = (nextId: string) => {
+    setStudentId(nextId)
+    const next = students.find((s) => s.id === nextId)
+    setGrade(next ? currentGrade(next) : gradeOptionsFor(nextId)[0])
+  }
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
@@ -27,7 +41,7 @@ export default function AddScore() {
       return
     }
 
-    addScore({ studentId, subject: subject.trim(), score: numericScore, date, semester })
+    addScore({ studentId, subject: subject.trim(), score: numericScore, date, semester, grade })
     navigate(`/students/${studentId}`)
   }
 
@@ -39,10 +53,21 @@ export default function AddScore() {
       <form className="card form" onSubmit={handleSubmit}>
         <label>
           Student
-          <select value={studentId} onChange={(e) => setStudentId(e.target.value)}>
+          <select value={studentId} onChange={(e) => handleStudentChange(e.target.value)}>
             {students.map((s) => (
               <option key={s.id} value={s.id}>
                 {s.avatar} {s.name}
+              </option>
+            ))}
+          </select>
+        </label>
+
+        <label>
+          Grade
+          <select value={grade} onChange={(e) => setGrade(Number(e.target.value))}>
+            {gradeOptions.map((g) => (
+              <option key={g} value={g}>
+                Grade {g}
               </option>
             ))}
           </select>
