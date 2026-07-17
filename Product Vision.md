@@ -10,3 +10,19 @@ Become the simplest and most effective personal learning tracker for families.
 - focus on growth, not score
 - parent + child co-usage
 - simple UX
+
+## Phase 1
+
+Family MVP
+
+## Phase 2
+
+Share Dashboard
+
+## Phase 3
+
+Multi-Family
+
+## Phase 4
+
+AI Insights

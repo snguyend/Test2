@@ -8,7 +8,8 @@ import Particles from '../components/Particles'
 import Widgets from '../components/Widgets'
 import FamilyOverview from '../components/FamilyOverview'
 import QuickCheckIn from '../components/QuickCheckIn'
-import { averageScore, subjectAverages } from '../utils/scores'
+import FamilyCelebration from '../components/FamilyCelebration'
+import { subjectAverages } from '../utils/scores'
 import { academicScore, habitScore, growthScore } from '../utils/growth'
 import { currentStreak } from '../utils/streak'
 import { gradeOptionsFor, gradeNumber } from '../utils/grades'
@@ -19,6 +20,7 @@ export default function Dashboard() {
   const [semester, setSemester] = useState<'all' | 'first' | 'second'>('all')
   const [gradeFilter, setGradeFilter] = useState<'all' | number>('all')
   const [checkInOpen, setCheckInOpen] = useState(false)
+  const [celebrationOpen, setCelebrationOpen] = useState(false)
 
   const activeStudent = students.find((s) => s.id === filter)
   const accent = activeStudent?.color
@@ -238,11 +240,15 @@ export default function Dashboard() {
         <Link to="/goals" className="btn">
           🏆 View goals
         </Link>
+        <button type="button" className="btn" onClick={() => setCelebrationOpen(true)}>
+          🎉 Monthly Celebration
+        </button>
       </div>
 
       <Widgets />
 
       {checkInOpen && <QuickCheckIn onClose={() => setCheckInOpen(false)} />}
+      {celebrationOpen && <FamilyCelebration onClose={() => setCelebrationOpen(false)} />}
     </div>
   )
 }

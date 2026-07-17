@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAppData } from '../store-context'
 import { averageScore, subjectAverages } from '../utils/scores'
-import type { Goal, Reward, ScoreEntry, Student } from '../types'
+import type { Goal, GrowthSnapshot, HabitGoal, Reward, ScoreEntry, Student } from '../types'
 
 interface ChatMessage {
   id: string
@@ -15,6 +15,8 @@ interface TutorData {
   scores: ScoreEntry[]
   goals: Goal[]
   rewards: Reward[]
+  habitGoals: HabitGoal[]
+  growthHistory: GrowthSnapshot[]
 }
 
 function norm(s: string): string {
@@ -92,11 +94,139 @@ function studyTip(student: Student | undefined, data: TutorData): string {
   return `For ${target.name}, ${weakest.label} (avg ${weakest.value}) could use attention.\n💡 ${tip}`
 }
 
+/** Long month + year label, e.g. "July 2026". */
+function monthLabel(): string {
+  return new Date().toLocaleDateString('en-US', { month: 'long', year: 'numeric' })
+}
+
+/** Average weekly habit completion (0–100) for a set of habits. */
+function habitPercent(habits: HabitGoal[]): number {
+  if (habits.length === 0) return 0
+  const pct =
+    habits.reduce(
+      (sum, h) =>
+        sum + (h.weeklyTarget > 0 ? Math.min(100, (h.weeklyProgress / h.weeklyTarget) * 100) : 0),
+      0,
+    ) / habits.length
+  return Math.round(pct)
+}
+
+/** Growth score at the start of the month (~4 weeks ago) vs the latest snapshot. */
+function growthTrend(
+  studentId: string,
+  history: GrowthSnapshot[],
+): { from: number; to: number } | null {
+  const snaps = history
+    .filter((g) => g.studentId === studentId)
+    .sort((a, b) => a.date.localeCompare(b.date))
+  if (snaps.length === 0) return null
+  const to = snaps[snaps.length - 1].score
+  const from = snaps[Math.max(0, snaps.length - 5)].score // ~4 weeks earlier
+  return { from: Math.round(from * 10) / 10, to: Math.round(to * 10) / 10 }
+}
+
+/** Distinct subjects with results recorded in the ~60 days up to the latest score. */
+function recentSubjects(studentId: string, scores: ScoreEntry[]): string[] {
+  const list = scores.filter((s) => s.studentId === studentId)
+  if (list.length === 0) return []
+  const latest = list.reduce((m, s) => (s.date > m ? s.date : m), list[0].date)
+  const cutoff = new Date(latest)
+  cutoff.setDate(cutoff.getDate() - 60)
+  const cutoffIso = cutoff.toISOString().slice(0, 10)
+  const recent = list.filter((s) => s.date >= cutoffIso)
+  return [...new Set(recent.map((s) => s.subject))]
+}
+
+/** Per-student narrative paragraph for the monthly summary. */
+function studentMonthly(student: Student, data: TutorData): string {
+  const scores = data.scores.filter((s) => s.studentId === student.id)
+  const goals = data.goals.filter((g) => g.studentId === student.id)
+  const habits = data.habitGoals.filter((h) => h.studentId === student.id)
+  const subjAvgs = new Map(subjectAverages(scores).map((s) => [s.label, s.value]))
+  const firstName = student.name.split(' ').slice(-1)[0]
+
+  // Growth trend over the month
+  const trend = growthTrend(student.id, data.growthHistory)
+  const growthText = trend
+    ? trend.to > trend.from
+      ? `improved their growth score from ${trend.from} to ${trend.to}`
+      : trend.to < trend.from
+        ? `held a growth score of ${trend.to} (from ${trend.from})`
+        : `sustained a steady growth score of ${trend.to}`
+    : `is building up their growth score`
+
+  // Leading subject goal, as % of its target (e.g. 112% English goal)
+  const subjectGoalPcts = goals
+    .filter((g) => g.subject && g.targetScore)
+    .map((g) => ({
+      subject: g.subject as string,
+      pct: Math.round(((subjAvgs.get(g.subject as string) ?? 0) / (g.targetScore as number)) * 100),
+    }))
+    .sort((a, b) => b.pct - a.pct)
+  const topGoal = subjectGoalPcts[0]
+  const goalText = topGoal ? `, and is sustaining ${topGoal.pct}% of the ${topGoal.subject} goal` : ''
+
+  // Completed goals + reward points
+  const done = goals.filter((g) => g.done)
+  const pts = pointsFor(student.id, data)
+
+  // Overall monthly completion = goals 40% + habits 30% + growth 30%
+  const goalsPct = goals.length ? (done.length / goals.length) * 100 : 0
+  const habitPct = habitPercent(habits)
+  const growthPct = trend ? (trend.to / 10) * 100 : 0
+  const overall = Math.round(goalsPct * 0.4 + habitPct * 0.3 + growthPct * 0.3)
+
+  const lines: string[] = [`${student.avatar} ${student.name} — ${student.grade}`]
+  lines.push(`This month ${firstName} ${growthText}${goalText}.`)
+
+  if (done.length) {
+    const labels = done.map((g) => g.subject ?? g.title).join(', ')
+    lines.push(`Completed ${done.length}/${goals.length} goals (${labels}) — earned ${pts.earned} pts.`)
+  } else if (goals.length) {
+    lines.push(`Working on ${goals.length} goals — none completed yet this month.`)
+  }
+
+  const subjects = recentSubjects(student.id, scores)
+  if (subjects.length) {
+    lines.push(`Subjects with recent results: ${subjects.join(', ')}.`)
+  }
+
+  if (habits.length) {
+    const habitText = habits
+      .map(
+        (h) =>
+          `${h.icon} ${h.activity} ${Math.round(
+            h.weeklyTarget ? Math.min(100, (h.weeklyProgress / h.weeklyTarget) * 100) : 0,
+          )}%`,
+      )
+      .join(', ')
+    lines.push(`Habits: ${habitText}.`)
+  }
+
+  const emoji = overall >= 90 ? '🎉' : overall >= 75 ? '👏' : '💪'
+  lines.push(`Overall completed ${overall}% of the month. ${emoji}`)
+
+  return lines.join('\n')
+}
+
+/** Full AI monthly summary across every child, gathered from the whole app. */
+function monthlySummary(data: TutorData): string {
+  if (data.students.length === 0) return 'Add a student to generate a monthly summary.'
+  const header = `🤖 AI Monthly Summary — ${monthLabel()}`
+  const body = data.students.map((s) => studentMonthly(s, data)).join('\n\n')
+  return `${header}\n\n${body}`
+}
+
 function buildAnswer(question: string, data: TutorData): string {
   const q = norm(question)
   const mentioned = findStudent(question, data)
 
   if (!q) return `Ask me anything about your children's learning progress!`
+
+  // Monthly summary report (collects data from the whole app)
+  if (/(monthly|this month|month.*(summary|report|recap|overview)|(summary|report|recap).*month)/.test(q)) {
+    return monthlySummary(data)
+  }
 
   // Greetings
   if (/^(hi|hello|hey|yo|good (morning|afternoon|evening))\b/.test(q)) {
@@ -188,11 +318,11 @@ const QUICK_PROMPTS = [
 ]
 
 export default function AITutor() {
-  const { students, scores, goals, rewards } = useAppData()
+  const { students, scores, goals, rewards, habitGoals, growthHistory } = useAppData()
   const navigate = useNavigate()
   const data = useMemo<TutorData>(
-    () => ({ students, scores, goals, rewards }),
-    [students, scores, goals, rewards],
+    () => ({ students, scores, goals, rewards, habitGoals, growthHistory }),
+    [students, scores, goals, rewards, habitGoals, growthHistory],
   )
 
   const [open, setOpen] = useState(false)
@@ -263,6 +393,12 @@ export default function AITutor() {
           </div>
 
           <div className="tutor-quick">
+            <button
+              className="tutor-chip tutor-chip-primary"
+              onClick={() => send('AI Monthly Summary')}
+            >
+              🤖 AI Monthly Summary
+            </button>
             {QUICK_PROMPTS.map((p) => (
               <button key={p} className="tutor-chip" onClick={() => send(p)}>
                 {p}

@@ -208,7 +208,9 @@ function StudyTip() {
   return (
     <div className="widget widget-tip card">
       <h3 className="widget-title">💡 Study Tip</h3>
-      <p className="tip-text">{TIPS[i]}</p>
+      <p className="tip-text" key={i}>
+        {TIPS[i]}
+      </p>
       <button className="btn tip-next" onClick={() => setI((p) => (p + 1) % TIPS.length)}>
         Another tip →
       </button>

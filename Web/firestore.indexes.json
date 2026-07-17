@@ -1,0 +1,29 @@
+{
+  "indexes": [
+    {
+      "collectionGroup": "scores",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "childId", "order": "ASCENDING" },
+        { "fieldPath": "subject", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "weeklySnapshots",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "familyId", "order": "ASCENDING" },
+        { "fieldPath": "weekStart", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "habitCheckins",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "habitId", "order": "ASCENDING" },
+        { "fieldPath": "date", "order": "ASCENDING" }
+      ]
+    }
+  ],
+  "fieldOverrides": []
+}

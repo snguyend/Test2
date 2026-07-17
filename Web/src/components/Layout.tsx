@@ -4,7 +4,9 @@ import Settings from './Settings'
 import AITutor from './AITutor'
 import Header from './Header'
 import Particles from './Particles'
-import { useAppData } from '../store-context'
+import ChildrenManager from './ChildrenManager'
+import SyncIndicator from './SyncIndicator'
+import ImportPrompt from './ImportPrompt'
 
 const links = [
   { to: '/', label: 'Dashboard', icon: '🏠', end: true },
@@ -12,11 +14,10 @@ const links = [
   { to: '/add-score', label: 'Add Score', icon: '➕' },
   { to: '/progress', label: 'Progress', icon: '📈' },
   { to: '/goals', label: 'Goals', icon: '🏆' },
+  { to: '/viewer', label: 'Viewer', icon: '👀' },
 ]
 
 export default function Layout() {
-  const { students } = useAppData()
-
   return (
     <div className="app">
       <aside className="sidebar">
@@ -27,6 +28,7 @@ export default function Layout() {
             <span className="logo-text">Education Growth</span>
           </span>
           <span className="tagline">Family learning tracker</span>
+          <SyncIndicator />
         </div>
 
         <nav className="nav">
@@ -45,22 +47,7 @@ export default function Layout() {
 
         <div className="sidebar-sections">
           <CollapsibleSection title="Children" icon="👨‍👩‍👧‍👦" defaultOpen>
-            <ul className="side-list">
-              {students.map((s) => (
-                <li key={s.id}>
-                  <NavLink
-                    to={`/students/${s.id}`}
-                    className={({ isActive }) =>
-                      isActive ? 'side-link child-link active' : 'side-link child-link'
-                    }
-                    style={{ ['--c' as string]: s.color } as React.CSSProperties}
-                  >
-                    <span className="child-avatar">{s.avatar}</span>
-                    {s.name}
-                  </NavLink>
-                </li>
-              ))}
-            </ul>
+            <ChildrenManager />
           </CollapsibleSection>
 
           <CollapsibleSection title="Quick Actions" icon="⚡">
@@ -103,6 +90,7 @@ export default function Layout() {
 
       <main className="content">
         <Header />
+        <ImportPrompt />
         <Outlet />
       </main>
 

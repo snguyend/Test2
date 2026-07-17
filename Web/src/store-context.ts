@@ -5,10 +5,13 @@ import type {
   JournalEntry,
   GrowthSnapshot,
   SchoolYearOverride,
+  Encouragement,
   Reward,
   ScoreEntry,
   Student,
 } from './types'
+
+export type SyncState = 'local' | 'synced' | 'syncing' | 'error'
 
 export interface AppState {
   students: Student[]
@@ -21,6 +24,15 @@ export interface AppState {
   checkIns: string[]
   growthHistory: GrowthSnapshot[]
   schoolYearOverrides: Record<string, SchoolYearOverride>
+  encouragements: Encouragement[]
+  /** True when reads/writes are backed by Supabase (signed in), false for localStorage. */
+  remote: boolean
+  /** Cloud sync status for the header indicator. */
+  syncState: SyncState
+  /** Re-fetch all data from the backend (no-op in local mode). */
+  reload: () => void
+  addStudent: (student: Omit<Student, 'id' | 'parentId'>) => void
+  deleteStudent: (id: string) => void
   addScore: (score: Omit<ScoreEntry, 'id'>) => void
   updateScore: (id: string, score: number) => void
   deleteScore: (id: string) => void
@@ -38,12 +50,13 @@ export interface AppState {
   snapshotGrowth: (studentId: string, date: string, score: number) => void
   setSchoolYear: (studentId: string, grade: number, start: string, end: string) => void
   resetSchoolYear: (studentId: string, grade: number) => void
+  addEncouragement: (entry: Omit<Encouragement, 'id'>) => void
+  deleteEncouragement: (id: string) => void
   setStudentPhoto: (studentId: string, dataUrl: string) => void
   updateStudentGrade: (studentId: string, grade: string) => void
 }
 
 export const AppContext = createContext<AppState | undefined>(undefined)
-
 export function useAppData() {
   const ctx = useContext(AppContext)
   if (!ctx) throw new Error('useAppData must be used within AppProvider')

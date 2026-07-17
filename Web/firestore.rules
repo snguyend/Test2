@@ -1,0 +1,89 @@
+rules_version = '2';
+
+// Firestore Security Rules for the flat collection layout used by firebaseStore.ts.
+// See Firebase_Architecture.md §6. Membership uses deterministic ids
+// (`${familyId}_${userId}`) so we can check with exists() instead of a query.
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function signedIn() {
+      return request.auth != null;
+    }
+    function uid() {
+      return request.auth.uid;
+    }
+    function memberPath(familyId) {
+      return /databases/$(database)/documents/familyMembers/$(familyId + '_' + uid());
+    }
+    function isMember(familyId) {
+      return signedIn() && exists(memberPath(familyId));
+    }
+    function role(familyId) {
+      return get(memberPath(familyId)).data.role;
+    }
+    function canWrite(familyId) {
+      return isMember(familyId) && role(familyId) in ['owner', 'parent', 'guardian'];
+    }
+
+    // Global user profile — self only.
+    match /users/{userId} {
+      allow read, write: if signedIn() && uid() == userId;
+    }
+
+    // Family root.
+    match /families/{familyId} {
+      allow read: if isMember(familyId);
+      allow create: if signedIn() && request.resource.data.ownerUserId == uid();
+      allow update, delete: if signedIn() && resource.data.ownerUserId == uid();
+    }
+
+    // Membership. A user can create their own membership (bootstrap); owners manage the rest.
+    match /familyMembers/{memberId} {
+      allow read: if signedIn() && (resource.data.userId == uid() || isMember(resource.data.familyId));
+      allow create: if signedIn() && request.resource.data.userId == uid();
+      allow update, delete: if signedIn() && canWrite(resource.data.familyId);
+    }
+
+    // Family-/child-scoped collections: read for members, write for non-viewers.
+    // Every doc carries a `familyId` field.
+    match /children/{id}         { allow read: if isMember(resource.data.familyId);
+                                   allow create: if canWrite(request.resource.data.familyId);
+                                   allow update, delete: if canWrite(resource.data.familyId); }
+    match /rewards/{id}          { allow read: if isMember(resource.data.familyId);
+                                   allow create: if canWrite(request.resource.data.familyId);
+                                   allow update, delete: if canWrite(resource.data.familyId); }
+    match /scores/{id}           { allow read: if isMember(resource.data.familyId);
+                                   allow create: if canWrite(request.resource.data.familyId);
+                                   allow update, delete: if canWrite(resource.data.familyId); }
+    match /academicGoals/{id}    { allow read: if isMember(resource.data.familyId);
+                                   allow create: if canWrite(request.resource.data.familyId);
+                                   allow update, delete: if canWrite(resource.data.familyId); }
+    match /habits/{id}           { allow read: if isMember(resource.data.familyId);
+                                   allow create: if canWrite(request.resource.data.familyId);
+                                   allow update, delete: if canWrite(resource.data.familyId); }
+    match /habitCheckins/{id}    { allow read: if isMember(resource.data.familyId);
+                                   allow create: if canWrite(request.resource.data.familyId);
+                                   allow update, delete: if canWrite(resource.data.familyId); }
+    match /weeklySnapshots/{id}  { allow read: if isMember(resource.data.familyId);
+                                   allow create: if canWrite(request.resource.data.familyId);
+                                   allow update, delete: if canWrite(resource.data.familyId); }
+    match /achievements/{id}     { allow read: if isMember(resource.data.familyId);
+                                   allow create: if canWrite(request.resource.data.familyId);
+                                   allow update, delete: if canWrite(resource.data.familyId); }
+    match /parentNotes/{id}      { allow read: if isMember(resource.data.familyId);
+                                   allow create: if canWrite(request.resource.data.familyId);
+                                   allow update, delete: if canWrite(resource.data.familyId); }
+    // Encouragements are open to EVERY family member (including viewers) so
+    // anyone can post and read notes on the Encouragement Wall.    match /encouragements/{id}   { allow read: if isMember(resource.data.familyId);
+                                   allow create: if isMember(request.resource.data.familyId);
+                                   allow update, delete: if isMember(resource.data.familyId); }
+    match /dailyCheckins/{id}    { allow read: if isMember(resource.data.familyId);
+                                   allow create: if canWrite(request.resource.data.familyId);
+                                   allow update, delete: if canWrite(resource.data.familyId); }
+
+    // Monthly AI summaries (written by Cloud Functions; readable by members).
+    match /familySummaries/{id}  { allow read: if isMember(resource.data.familyId);
+                                   allow write: if false; }
+  }
+}

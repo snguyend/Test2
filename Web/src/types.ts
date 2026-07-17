@@ -78,3 +78,11 @@ export interface SchoolYearOverride {
   end: string // ISO date
 }
 
+export interface Encouragement {
+  id: string
+  studentId: string
+  from: string // who sent it, e.g. "Grandma", "Dad"
+  message: string
+  date: string // ISO date
+}
+

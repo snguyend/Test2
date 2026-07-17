@@ -13,6 +13,7 @@ export const STORAGE_KEYS = {
   checkIns: `${PREFIX}check-ins`,
   growthHistory: `${PREFIX}growth-history`,
   schoolYears: `${PREFIX}school-years`,
+  encouragements: `${PREFIX}encouragements`,
 } as const
 
 /**

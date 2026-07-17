@@ -1,4 +1,4 @@
-import type { Goal, HabitGoal, JournalEntry, GrowthSnapshot, Parent, Reward, ScoreEntry, Student } from '../types'
+import type { Goal, HabitGoal, JournalEntry, GrowthSnapshot, Encouragement, Parent, Reward, ScoreEntry, Student } from '../types'
 
 export const parents: Parent[] = [
   { id: 'p1', name: 'Nguyễn Văn An', email: 'an.nguyen@example.com' },
@@ -10,7 +10,7 @@ export const students: Student[] = [
     name: 'Nguyễn Bảo Hiếu',
     grade: 'Preparing for Grade 8',
     avatar: '👦',
-    color: '#2563eb',
+    color: '#0891b2',
     parentId: 'p1',
     birthYear: 2013,
   },
@@ -19,7 +19,7 @@ export const students: Student[] = [
     name: 'Nguyễn Thị Bảo Hân',
     grade: 'Grade 3',
     avatar: '👧',
-    color: '#db2777',
+    color: '#e11d48',
     parentId: 'p1',
     birthYear: 2018,
   },
@@ -206,5 +206,29 @@ function seedGrowthHistory(studentId: string, endScore: number): GrowthSnapshot[
 export const initialGrowthHistory: GrowthSnapshot[] = [
   ...seedGrowthHistory('s1', 8.6),
   ...seedGrowthHistory('s2', 8.8),
+]
+
+export const initialEncouragements: Encouragement[] = [
+  {
+    id: 'e1',
+    studentId: 's1',
+    from: 'Grandma',
+    message: "I'm so proud you've kept up your reading this week ❤️",
+    date: '2026-07-12',
+  },
+  {
+    id: 'e2',
+    studentId: 's1',
+    from: 'Dad',
+    message: "You're making great progress — keep it up! 🚀",
+    date: '2026-07-10',
+  },
+  {
+    id: 'e3',
+    studentId: 's2',
+    from: 'Mom',
+    message: 'Your art is beautiful and your reading is so consistent. Well done! 🌟',
+    date: '2026-07-11',
+  },
 ]
 

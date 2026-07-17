@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { useAppData } from '../store-context'
 import Avatar from '../components/Avatar'
@@ -16,6 +16,7 @@ import {
   dayLabel,
 } from '../utils/growth'
 import { currentStreak } from '../utils/streak'
+import { computeBadgeGroups, allBadgesOf } from '../utils/badges'
 import { currentGrade, gradeOptionsFor, schoolYearForGrade } from '../utils/grades'
 import { subjectColor } from '../data/courses'
 
@@ -52,6 +53,9 @@ export default function StudentDetails() {
     snapshotGrowth,
     setSchoolYear,
     resetSchoolYear,
+    encouragements,
+    addEncouragement,
+    deleteEncouragement,
   } = useAppData()
   const { id } = useParams()
   const student = id ? students.find((s) => s.id === id) : undefined
@@ -68,6 +72,9 @@ export default function StudentDetails() {
   const [editingYear, setEditingYear] = useState(false)
   const [yearStartInput, setYearStartInput] = useState('')
   const [yearEndInput, setYearEndInput] = useState('')
+  // Encouragement form
+  const [encFrom, setEncFrom] = useState('')
+  const [encMessage, setEncMessage] = useState('')
 
   // New academic goal form
   const [newAcadSubject, setNewAcadSubject] = useState('')
@@ -78,14 +85,17 @@ export default function StudentDetails() {
   const [newHabitUnit, setNewHabitUnit] = useState<string>('minutes')
   const [newHabitTarget, setNewHabitTarget] = useState('120')
 
-  // Reset the grade tab / active tab whenever we switch to a different student.
-  useEffect(() => {
+  // Reset per-student view state when switching to a different student.
+  // (Render-time reset — the recommended alternative to doing this in an effect.)
+  const [prevId, setPrevId] = useState(id)
+  if (id !== prevId) {
+    setPrevId(id)
     setSelectedGrade(null)
     setTab('progress')
     setFromDate(null)
     setToDate(null)
     setEditingYear(false)
-  }, [id])
+  }
 
   // Student picker list when no id is selected
   if (!id) {
@@ -208,28 +218,10 @@ export default function StudentDetails() {
   // Academic goals = goals tied to a subject / target score.
   const academicGoals = studentGoals.filter((g) => g.subject || g.targetScore != null)
 
-  // ---- Badges (derived) ----
-  const readingHabit = studentHabits.find((h) => /read/i.test(h.activity))
-  const readingHero = readingHabit
-    ? readingHabit.weeklyProgress >= readingHabit.weeklyTarget
-    : false
-  const consistencyChampion =
-    studentHabits.length > 0 &&
-    studentHabits.every((h) => h.weeklyProgress >= h.weeklyTarget)
-  const doneGoalsCount = studentGoals.filter((g) => g.done).length
-  const goalCrusher = doneGoalsCount >= 3
-  const perfectTen = studentScores.some((s) => s.score === 10)
-  const risingStar = growthTrend > 0
-  const straightA = academic >= 9
-
-  const badges = [
-    { icon: '📚', name: 'Reading Hero', desc: 'Hit the weekly reading target', earned: readingHero },
-    { icon: '🔥', name: 'Consistency Champion', desc: 'Met every habit goal this week', earned: consistencyChampion },
-    { icon: '🏆', name: 'Goal Crusher', desc: 'Completed 3 or more goals', earned: goalCrusher },
-    { icon: '💯', name: 'Perfect Ten', desc: 'Scored a perfect 10', earned: perfectTen },
-    { icon: '📈', name: 'Rising Star', desc: 'Growth improved this week', earned: risingStar },
-    { icon: '🌟', name: "Straight A's", desc: 'Academic score of 9+', earned: straightA },
-  ]
+  // ---- Reward System: badges by category (effort · progress · persistence) ----
+  const badgeGroups = computeBadgeGroups(studentScores, studentHabits, studentGoals)
+  const allBadges = allBadgesOf(badgeGroups)
+  const earnedCount = allBadges.filter((b) => b.earned).length
 
   const trendLabel =
     growthTrend > 0
@@ -284,6 +276,22 @@ export default function StudentDetails() {
   const resetYear = () => {
     resetSchoolYear(student.id, grade)
     setEditingYear(false)
+  }
+
+  const studentEncouragements = encouragements.filter((e) => e.studentId === student.id)
+  const submitEncouragement = (e: React.FormEvent) => {
+    e.preventDefault()
+    const from = encFrom.trim()
+    const message = encMessage.trim()
+    if (!message) return
+    addEncouragement({
+      studentId: student.id,
+      from: from || 'Family',
+      message,
+      date: new Date().toISOString().slice(0, 10),
+    })
+    setEncFrom('')
+    setEncMessage('')
   }
 
   const addAcademicGoal = (e: React.FormEvent) => {
@@ -894,28 +902,96 @@ export default function StudentDetails() {
       {/* ---------- TAB 3: ACHIEVEMENTS ---------- */}
       {tab === 'achievements' && (
         <section className="card">
-          <h2>🏆 Achievements</h2>
-          <p className="muted">
-            {badges.filter((b) => b.earned).length} of {badges.length} badges earned.
+          <h2>🏆 Reward System</h2>
+          <p className="muted reward-philosophy">
+            Badges celebrate <strong>effort</strong>, <strong>progress</strong> &{' '}
+            <strong>persistence</strong> — never competition or comparison between children.
           </p>
-          <div className="badge-collection">
-            {badges.map((b) => (
-              <div key={b.name} className={`badge-card${b.earned ? ' earned' : ' locked'}`}>
-                <span className="badge-card-icon">{b.earned ? b.icon : '🔒'}</span>
-                <span className="badge-card-name">{b.name}</span>
-                <span className="badge-card-desc">{b.desc}</span>
-                {b.earned && <span className="badge-card-tag">Earned</span>}
+          <p className="muted">
+            {earnedCount} of {allBadges.length} badges earned.
+          </p>
+
+          {badgeGroups.map((group) => (
+            <div key={group.category} className="badge-category">
+              <div className="badge-category-head">
+                <span className="badge-category-icon">{group.icon}</span>
+                <h3>{group.category}</h3>
+                <span className="badge-category-hint">{group.hint}</span>
               </div>
-            ))}
-          </div>
+              <div className="badge-collection">
+                {group.badges.map((b) => (
+                  <div key={b.name} className={`badge-card${b.earned ? ' earned' : ' locked'}`}>
+                    <span className="badge-card-icon">{b.earned ? b.icon : '🔒'}</span>
+                    <span className="badge-card-name">{b.name}</span>
+                    <span className="badge-card-desc">{b.desc}</span>
+                    {b.earned && <span className="badge-card-tag">Earned</span>}
+                  </div>
+                ))}
+              </div>
+            </div>
+          ))}
         </section>
       )}
 
       {/* ---------- TAB 4: GROWTH JOURNAL ---------- */}
       {tab === 'journal' && (
-        <section className="card">
-          <h2>❤️ Growth Journal</h2>
-          <p className="muted">A weekly reflection on {student.name}'s growth journey.</p>
+        <>
+          <section className="card">
+            <h2>❤️ Family Encouragement</h2>
+            <p className="muted">
+              Anyone in the family can send {student.name} a note of encouragement.
+            </p>
+
+            <form className="enc-form" onSubmit={submitEncouragement}>
+              <input
+                className="enc-from"
+                type="text"
+                value={encFrom}
+                placeholder="From (e.g. Grandma)"
+                onChange={(e) => setEncFrom(e.target.value)}
+                aria-label="Your name"
+              />
+              <input
+                className="enc-message"
+                type="text"
+                value={encMessage}
+                placeholder="Write an encouraging message… ❤️"
+                onChange={(e) => setEncMessage(e.target.value)}
+                aria-label="Encouragement message"
+              />
+              <button type="submit" className="btn primary" disabled={!encMessage.trim()}>
+                💌 Send
+              </button>
+            </form>
+
+            {studentEncouragements.length === 0 ? (
+              <p className="muted">No messages yet. Be the first to cheer them on!</p>
+            ) : (
+              <ul className="enc-list">
+                {studentEncouragements.map((e) => (
+                  <li key={e.id} className="enc-card">
+                    <div className="enc-card-head">
+                      <span className="enc-from-name">💌 {e.from}</span>
+                      <span className="enc-date muted">{e.date}</span>
+                      <button
+                        className="row-delete"
+                        onClick={() => deleteEncouragement(e.id)}
+                        aria-label="Delete message"
+                        title="Delete message"
+                      >
+                        🗑
+                      </button>
+                    </div>
+                    <p className="enc-text">{e.message}</p>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </section>
+
+          <section className="card">
+            <h2>❤️ Growth Journal</h2>
+            <p className="muted">A weekly reflection on {student.name}'s growth journey.</p>
 
           <form className="journal-form" onSubmit={submitNote}>
             <label className="journal-field">
@@ -1019,7 +1095,8 @@ export default function StudentDetails() {
               ))}
             </ul>
           )}
-        </section>
+          </section>
+        </>
       )}
 
       <div className="quick-actions">
