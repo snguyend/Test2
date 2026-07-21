@@ -5,6 +5,8 @@ interface CollapsibleSectionProps {
   title: string
   icon?: string
   defaultOpen?: boolean
+  /** Optional accent colour for the section title. */
+  color?: string
   children: ReactNode
 }
 
@@ -12,6 +14,7 @@ export default function CollapsibleSection({
   title,
   icon,
   defaultOpen = false,
+  color,
   children,
 }: CollapsibleSectionProps) {
   const [open, setOpen] = useState(defaultOpen)
@@ -19,7 +22,7 @@ export default function CollapsibleSection({
   return (
     <div className={open ? 'collapsible open' : 'collapsible'}>
       <button className="collapsible-header" onClick={() => setOpen((v) => !v)}>
-        <span className="collapsible-title">
+        <span className="collapsible-title" style={color ? { color } : undefined}>
           {icon && <span className="collapsible-icon">{icon}</span>}
           {title}
         </span>

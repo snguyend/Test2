@@ -3,6 +3,9 @@ import type { ReactNode } from 'react'
 import type {
   Goal,
   HabitGoal,
+  Homework,
+  BlogPost,
+  AboutContent,
   JournalEntry,
   GrowthSnapshot,
   SchoolYearOverride,
@@ -14,6 +17,9 @@ import type {
 import {
   initialGoals,
   initialHabitGoals,
+  initialHomework,
+  initialBlogPosts,
+  defaultAboutContent,
   initialJournal,
   initialGrowthHistory,
   initialEncouragements,
@@ -24,7 +30,7 @@ import {
 import { STORAGE_KEYS, loadState, saveState } from './utils/storage'
 import { MAX_SCORE } from './utils/scores'
 import { AppContext, type AppState, type SyncState } from './store-context'
-import { isSupabaseConfigured } from './lib/supabase'
+import { isSupabaseConfigured, PUBLIC_FAMILY_ID } from './lib/supabase'
 import { useAuth } from './auth-context'
 import * as SB from './utils/supabaseStore'
 
@@ -60,9 +66,21 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [encouragements, setEncouragements] = useState<Encouragement[]>(() =>
     loadState(STORAGE_KEYS.encouragements, initialEncouragements),
   )
+  const [homework, setHomework] = useState<Homework[]>(() =>
+    loadState(STORAGE_KEYS.homework, initialHomework),
+  )
+  const [blogPosts, setBlogPosts] = useState<BlogPost[]>(() =>
+    loadState(STORAGE_KEYS.blogPosts, initialBlogPosts),
+  )
+  const [aboutContent, setAboutContent] = useState<AboutContent>(() =>
+    loadState(STORAGE_KEYS.aboutContent, defaultAboutContent),
+  )
 
-  // Remote mode is on only when Supabase is configured AND a family is resolved.
-  const { familyId } = useAuth()
+  // Remote mode is on when Supabase is configured AND a family is resolved.
+  // For no-login public sharing, fall back to the shared PUBLIC_FAMILY_ID so
+  // everyone who opens the URL reads/writes the same cloud family.
+  const { familyId: authFamilyId } = useAuth()
+  const familyId = authFamilyId ?? PUBLIC_FAMILY_ID ?? null
   const remoteMode = isSupabaseConfigured && !!familyId
 
   // Cloud sync status (drives the header indicator).
@@ -91,6 +109,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
         setCheckIns(s.checkIns)
         setGrowthHistory(s.growthHistory)
         setEncouragements(s.encouragements)
+        setHomework(s.homework)
+        setBlogPosts(s.blogPosts)
+        setAboutContent(s.aboutContent)
         setPhotos(s.photos)
         setSyncError(false)
       })
@@ -101,7 +122,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
       .finally(() => setPending((n) => Math.max(0, n - 1)))
   }, [familyId])
 
-  // Load remote data whenever a family becomes available.
+  // Load remote data whenever a family becomes available. reload() synchronizes
+  // from Supabase (an external system), which is a valid effect use here.
+  // eslint-disable-next-line react-hooks/set-state-in-effect
   useEffect(() => reload(), [reload])
 
   // Fire a remote write, then refetch to reconcile server-generated ids.
@@ -149,6 +172,15 @@ export function AppProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (!remoteMode) saveState(STORAGE_KEYS.encouragements, encouragements)
   }, [encouragements, remoteMode])
+  useEffect(() => {
+    if (!remoteMode) saveState(STORAGE_KEYS.homework, homework)
+  }, [homework, remoteMode])
+  useEffect(() => {
+    if (!remoteMode) saveState(STORAGE_KEYS.blogPosts, blogPosts)
+  }, [blogPosts, remoteMode])
+  useEffect(() => {
+    if (!remoteMode) saveState(STORAGE_KEYS.aboutContent, aboutContent)
+  }, [aboutContent, remoteMode])
   // Photos and school-year overrides are always local (no remote table yet).
   useEffect(() => saveState(STORAGE_KEYS.photos, photos), [photos])
   useEffect(() => saveState(STORAGE_KEYS.schoolYears, schoolYearOverrides), [schoolYearOverrides])
@@ -157,6 +189,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
   // defaults — never clobbers a colour the family picked themselves).
   useEffect(() => {
     if (loadState<boolean>('eg-colorfix-v1', false)) return
+    // One-time seed-data migration; safe to set state once on mount.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setStudents((prev) =>
       prev.map((s) => {
         if (s.id === 's1' && s.color === '#2563eb') return { ...s, color: '#0891b2' }
@@ -166,7 +200,6 @@ export function AppProvider({ children }: { children: ReactNode }) {
     )
     saveState('eg-colorfix-v1', true)
     // run once on mount
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   const value = useMemo<AppState>(
@@ -182,6 +215,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
       growthHistory,
       schoolYearOverrides,
       encouragements,
+      homework,
+      blogPosts,
+      aboutContent,
       remote: remoteMode,
       syncState,
       reload,
@@ -203,6 +239,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         setJournal((prev) => prev.filter((j) => j.studentId !== id))
         setGrowthHistory((prev) => prev.filter((g) => g.studentId !== id))
         setEncouragements((prev) => prev.filter((e) => e.studentId !== id))
+        setHomework((prev) => prev.filter((h) => h.studentId !== id))
         if (remoteMode) sync(SB.deleteChild(id))
       },
       addScore: (score) => {
@@ -319,6 +356,46 @@ export function AppProvider({ children }: { children: ReactNode }) {
         setEncouragements((prev) => prev.filter((e) => e.id !== id))
         if (remoteMode) sync(SB.deleteEncouragement(id))
       },
+      addHomework: (hw) => {
+        setHomework((prev) => [...prev, { ...hw, id: `hw${Date.now()}` }])
+        if (remoteMode) sync(SB.addHomework(hw))
+      },
+      toggleHomework: (id) => {
+        setHomework((prev) => prev.map((h) => (h.id === id ? { ...h, done: !h.done } : h)))
+        if (remoteMode) sync(SB.toggleHomework(id))
+      },
+      updateHomework: (id, patch) => {
+        setHomework((prev) => prev.map((h) => (h.id === id ? { ...h, ...patch } : h)))
+        if (remoteMode) sync(SB.updateHomework(id, patch))
+      },
+      deleteHomework: (id) => {
+        setHomework((prev) => prev.filter((h) => h.id !== id))
+        if (remoteMode) sync(SB.deleteHomework(id))
+      },
+      addBlogPost: (post) => {
+        setBlogPosts((prev) => [{ ...post, id: `b${Date.now()}` }, ...prev])
+        if (remoteMode && familyId) sync(SB.addBlogPost(familyId, post))
+      },
+      updateBlogPost: (id, patch) => {
+        setBlogPosts((prev) => prev.map((p) => (p.id === id ? { ...p, ...patch } : p)))
+        if (remoteMode) sync(SB.updateBlogPost(id, patch))
+      },
+      deleteBlogPost: (id) => {
+        setBlogPosts((prev) => prev.filter((p) => p.id !== id))
+        if (remoteMode) sync(SB.deleteBlogPost(id))
+      },
+      uploadBlogPhoto: async (dataUrl) => {
+        if (remoteMode && familyId) return SB.uploadBlogPhoto(familyId, dataUrl)
+        return dataUrl
+      },
+      updateAboutContent: (content) => {
+        setAboutContent(content)
+        if (remoteMode && familyId) sync(SB.upsertAboutContent(familyId, content))
+      },
+      uploadAboutPhoto: async (dataUrl) => {
+        if (remoteMode && familyId) return SB.uploadAboutPhoto(familyId, dataUrl)
+        return dataUrl
+      },
       setStudentPhoto: (studentId, dataUrl) => {
         setPhotos((prev) => ({ ...prev, [studentId]: dataUrl }))
         if (remoteMode && familyId) sync(SB.uploadChildPhoto(familyId, studentId, dataUrl))
@@ -340,6 +417,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
       growthHistory,
       schoolYearOverrides,
       encouragements,
+      homework,
+      blogPosts,
+      aboutContent,
       remoteMode,
       syncState,
       familyId,

@@ -14,6 +14,7 @@ const links = [
   { to: '/add-score', label: 'Add Score', icon: '➕' },
   { to: '/progress', label: 'Progress', icon: '📈' },
   { to: '/goals', label: 'Goals', icon: '🏆' },
+  { to: '/homework', label: 'Homework', icon: '📝' },
   { to: '/viewer', label: 'Viewer', icon: '👀' },
 ]
 

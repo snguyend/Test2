@@ -17,6 +17,14 @@ const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY as string | undef
 /** True when both env vars are present, so callers can fall back to localStorage. */
 export const isSupabaseConfigured = Boolean(supabaseUrl && supabaseAnonKey)
 
+/**
+ * Shared "public family" id for no-login sharing (see supabase/public-access.sql).
+ * When set, the app treats everyone as this one family — anyone with the URL sees
+ * and edits the same cloud data, without signing in. Leave unset to require login.
+ */
+export const PUBLIC_FAMILY_ID =
+  (import.meta.env.VITE_PUBLIC_FAMILY_ID as string | undefined) || undefined
+
 if (!isSupabaseConfigured) {
   // Not fatal — the app can still run on the localStorage store during migration.
   console.warn(

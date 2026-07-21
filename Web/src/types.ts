@@ -86,3 +86,42 @@ export interface Encouragement {
   date: string // ISO date
 }
 
+export interface Homework {
+  id: string
+  studentId: string
+  title: string
+  subject?: string
+  description?: string
+  dueDate?: string // ISO date (YYYY-MM-DD)
+  done: boolean
+}
+
+export interface BlogPost {
+  id: string
+  title: string
+  excerpt: string
+  date: string // display label, e.g. "Mar 4"
+  readMins: number
+  emoji: string
+  color: string // hex accent for the banner
+  tag: string
+  /** Optional banner photo (public URL). Falls back to the emoji banner. */
+  imageUrl?: string
+}
+
+/** Editable prose for the About page (one shared document per family). */
+export interface AboutContent {
+  heroTitle: string
+  heroBody: string
+  /** Optional hero photo (public URL or data URL). Falls back to the illustration. */
+  heroImageUrl?: string
+  /** CSS object-position for the hero photo, e.g. "50% 30%". */
+  heroImagePosition?: string
+  vision: string
+  mission: string
+  why: string
+  who: string
+  how: string
+  outcome: string
+}
+

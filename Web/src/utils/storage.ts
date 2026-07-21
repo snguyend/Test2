@@ -14,6 +14,9 @@ export const STORAGE_KEYS = {
   growthHistory: `${PREFIX}growth-history`,
   schoolYears: `${PREFIX}school-years`,
   encouragements: `${PREFIX}encouragements`,
+  homework: `${PREFIX}homework`,
+  blogPosts: `${PREFIX}blog-posts`,
+  aboutContent: `${PREFIX}about-content`,
 } as const
 
 /**

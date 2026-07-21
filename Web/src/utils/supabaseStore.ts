@@ -18,21 +18,27 @@
 import { supabase } from '../lib/supabase'
 import type {
   AcademicGoalRow,
+  BlogPostRow,
   ChildRow,
   DailyCheckinRow,
   EncouragementRow,
   HabitCheckinRow,
   HabitRow,
+  HomeworkRow,
   JournalEntryRow,
   RewardRow,
   ScoreRow,
+  UpdateOf,
   WeeklySnapshotRow,
 } from '../lib/database.types'
 import type {
+  AboutContent,
+  BlogPost,
   Encouragement,
   Goal,
   GrowthSnapshot,
   HabitGoal,
+  Homework,
   JournalEntry,
   Reward,
   ScoreEntry,
@@ -40,6 +46,7 @@ import type {
 } from '../types'
 import { isoDay, isoWeek } from './growth'
 import { STORAGE_KEYS, loadState } from './storage'
+import { defaultAboutContent, initialBlogPosts } from '../data/mockData'
 
 /* ------------------------------------------------------------------ */
 /* Error helper                                                        */
@@ -160,6 +167,32 @@ export function toEncouragement(row: EncouragementRow): Encouragement {
   }
 }
 
+export function toHomework(row: HomeworkRow): Homework {
+  return {
+    id: row.id,
+    studentId: row.child_id,
+    title: row.title,
+    subject: row.subject ?? undefined,
+    description: row.description ?? undefined,
+    dueDate: row.due_date ?? undefined,
+    done: row.done,
+  }
+}
+
+export function toBlogPost(row: BlogPostRow): BlogPost {
+  return {
+    id: row.id,
+    title: row.title,
+    excerpt: row.excerpt ?? '',
+    date: row.date_label ?? '',
+    readMins: row.read_mins,
+    emoji: row.emoji ?? '📝',
+    color: row.color ?? '#6366f1',
+    tag: row.tag ?? '',
+    imageUrl: row.image_url ?? undefined,
+  }
+}
+
 /* ------------------------------------------------------------------ */
 /* Week helpers                                                        */
 /* ------------------------------------------------------------------ */
@@ -197,6 +230,9 @@ export interface FamilyState {
   checkIns: string[]
   growthHistory: GrowthSnapshot[]
   encouragements: Encouragement[]
+  homework: Homework[]
+  blogPosts: BlogPost[]
+  aboutContent: AboutContent
   photos: Record<string, string>
 }
 
@@ -210,6 +246,9 @@ const EMPTY_STATE: FamilyState = {
   checkIns: [],
   growthHistory: [],
   encouragements: [],
+  homework: [],
+  blogPosts: [],
+  aboutContent: defaultAboutContent,
   photos: {},
 }
 
@@ -246,6 +285,44 @@ export async function fetchFamilyState(familyId: string): Promise<FamilyState> {
     if (c.photo_url) photos[c.id] = c.photo_url
   }
 
+  // Homework is fetched separately and tolerantly: if the `homework` table
+  // hasn't been created yet (supabase/homework.sql), fall back to an empty list
+  // instead of breaking the whole state load.
+  let homeworkList: Homework[] = []
+  try {
+    homeworkList = unwrap<HomeworkRow[]>(
+      await supabase.from('homework').select().in('child_id', childIds),
+    ).map(toHomework)
+  } catch (err) {
+    console.warn('[supabase] homework table not available yet', err)
+  }
+
+  // Blog posts are family-scoped and also fetched tolerantly (supabase/blog.sql).
+  // If the table doesn't exist yet, fall back to the seed articles so the blog
+  // is never empty (the classic card design still shows).
+  let blogList: BlogPost[]
+  try {
+    blogList = unwrap<BlogPostRow[]>(
+      await supabase.from('blog_posts').select().eq('family_id', familyId).order('created_at'),
+    ).map(toBlogPost)
+  } catch (err) {
+    console.warn('[supabase] blog_posts table not available yet', err)
+    blogList = initialBlogPosts
+  }
+
+  // About page prose (one shared row per family; resilient like the others).
+  let aboutContent: AboutContent = defaultAboutContent
+  try {
+    const rows = unwrap<{ content: AboutContent }[]>(
+      await supabase.from('about_content').select('content').eq('family_id', familyId).limit(1),
+    )
+    if (rows.length && rows[0].content) {
+      aboutContent = { ...defaultAboutContent, ...rows[0].content }
+    }
+  } catch (err) {
+    console.warn('[supabase] about_content table not available yet', err)
+  }
+
   return {
     students: children.map(toStudent),
     scores: unwrap<ScoreRow[]>(scores).map(toScore),
@@ -258,6 +335,9 @@ export async function fetchFamilyState(familyId: string): Promise<FamilyState> {
     ].sort(),
     growthHistory: unwrap<WeeklySnapshotRow[]>(snapshots).map(toGrowthSnapshot),
     encouragements: unwrap<EncouragementRow[]>(encouragements).map(toEncouragement),
+    homework: homeworkList,
+    blogPosts: blogList,
+    aboutContent,
     photos,
   }
 }
@@ -408,7 +488,7 @@ export async function addGoal(goal: Omit<Goal, 'id'>): Promise<Goal> {
 }
 
 export async function updateGoal(id: string, patch: Partial<Omit<Goal, 'id'>>): Promise<void> {
-  const dbPatch: Record<string, unknown> = {}
+  const dbPatch: UpdateOf<AcademicGoalRow> = {}
   if (patch.title !== undefined) dbPatch.title = patch.title
   if (patch.subject !== undefined) dbPatch.subject = patch.subject ?? null
   if (patch.targetScore !== undefined) dbPatch.target_score = patch.targetScore ?? null
@@ -508,7 +588,7 @@ export async function updateHabit(
   id: string,
   patch: Partial<Pick<HabitGoal, 'activity' | 'icon' | 'unit' | 'weeklyTarget'>>,
 ): Promise<void> {
-  const dbPatch: Record<string, unknown> = {}
+  const dbPatch: UpdateOf<HabitRow> = {}
   if (patch.activity !== undefined) dbPatch.name = patch.activity
   if (patch.icon !== undefined) dbPatch.icon = patch.icon
   if (patch.unit !== undefined) dbPatch.unit = patch.unit
@@ -652,6 +732,159 @@ export async function addEncouragement(
 
 export async function deleteEncouragement(id: string): Promise<void> {
   unwrap(await supabase.from('encouragements').delete().eq('id', id).select())
+}
+
+/* ------------------------------------------------------------------ */
+/* Homework                                                            */
+/* ------------------------------------------------------------------ */
+
+export async function addHomework(hw: Omit<Homework, 'id'>): Promise<Homework> {
+  const row = unwrap<HomeworkRow>(
+    await supabase
+      .from('homework')
+      .insert({
+        child_id: hw.studentId,
+        title: hw.title,
+        subject: hw.subject ?? null,
+        description: hw.description ?? null,
+        due_date: hw.dueDate ?? null,
+        done: hw.done,
+        done_at: hw.done ? new Date().toISOString() : null,
+      })
+      .select()
+      .single(),
+  )
+  return toHomework(row)
+}
+
+export async function toggleHomework(id: string): Promise<void> {
+  const hw = unwrap<{ done: boolean }>(
+    await supabase.from('homework').select('done').eq('id', id).single(),
+  )
+  const nowDone = !hw.done
+  unwrap(
+    await supabase
+      .from('homework')
+      .update({ done: nowDone, done_at: nowDone ? new Date().toISOString() : null })
+      .eq('id', id)
+      .select()
+      .single(),
+  )
+}
+
+export async function updateHomework(
+  id: string,
+  patch: Partial<Omit<Homework, 'id' | 'studentId'>>,
+): Promise<void> {
+  const dbPatch: UpdateOf<HomeworkRow> = {}
+  if (patch.title !== undefined) dbPatch.title = patch.title
+  if (patch.subject !== undefined) dbPatch.subject = patch.subject ?? null
+  if (patch.description !== undefined) dbPatch.description = patch.description ?? null
+  if (patch.dueDate !== undefined) dbPatch.due_date = patch.dueDate ?? null
+  if (patch.done !== undefined) {
+    dbPatch.done = patch.done
+    dbPatch.done_at = patch.done ? new Date().toISOString() : null
+  }
+  if (Object.keys(dbPatch).length === 0) return
+  unwrap(await supabase.from('homework').update(dbPatch).eq('id', id).select().single())
+}
+
+export async function deleteHomework(id: string): Promise<void> {
+  unwrap(await supabase.from('homework').delete().eq('id', id).select())
+}
+
+/* ------------------------------------------------------------------ */
+/* Blog posts (family-scoped)                                          */
+/* ------------------------------------------------------------------ */
+
+export async function addBlogPost(
+  familyId: string,
+  post: Omit<BlogPost, 'id'>,
+): Promise<BlogPost> {
+  const row = unwrap<BlogPostRow>(
+    await supabase
+      .from('blog_posts')
+      .insert({
+        family_id: familyId,
+        title: post.title,
+        excerpt: post.excerpt ?? null,
+        date_label: post.date ?? null,
+        read_mins: post.readMins,
+        emoji: post.emoji ?? null,
+        color: post.color ?? null,
+        tag: post.tag ?? null,
+        image_url: post.imageUrl ?? null,
+      })
+      .select()
+      .single(),
+  )
+  return toBlogPost(row)
+}
+
+export async function updateBlogPost(
+  id: string,
+  patch: Partial<Omit<BlogPost, 'id'>>,
+): Promise<void> {
+  const dbPatch: UpdateOf<BlogPostRow> = {}
+  if (patch.title !== undefined) dbPatch.title = patch.title
+  if (patch.excerpt !== undefined) dbPatch.excerpt = patch.excerpt ?? null
+  if (patch.date !== undefined) dbPatch.date_label = patch.date ?? null
+  if (patch.readMins !== undefined) dbPatch.read_mins = patch.readMins
+  if (patch.emoji !== undefined) dbPatch.emoji = patch.emoji ?? null
+  if (patch.color !== undefined) dbPatch.color = patch.color ?? null
+  if (patch.tag !== undefined) dbPatch.tag = patch.tag ?? null
+  if (patch.imageUrl !== undefined) dbPatch.image_url = patch.imageUrl || null
+  if (Object.keys(dbPatch).length === 0) return
+  unwrap(await supabase.from('blog_posts').update(dbPatch).eq('id', id).select().single())
+}
+
+export async function deleteBlogPost(id: string): Promise<void> {
+  unwrap(await supabase.from('blog_posts').delete().eq('id', id).select())
+}
+
+/* ------------------------------------------------------------------ */
+/* About page content (one shared row per family)                      */
+/* ------------------------------------------------------------------ */
+
+export async function upsertAboutContent(
+  familyId: string,
+  content: AboutContent,
+): Promise<void> {
+  unwrap(
+    await supabase
+      .from('about_content')
+      .upsert({ family_id: familyId, content }, { onConflict: 'family_id' })
+      .select(),
+  )
+}
+
+/**
+ * Upload the About hero photo (from a data URL) to the shared photo bucket and
+ * return its public URL. Reuses the `child-photos` bucket; path `${familyId}/about-hero`.
+ */
+export async function uploadAboutPhoto(familyId: string, dataUrl: string): Promise<string> {
+  const blob = await (await fetch(dataUrl)).blob()
+  const contentType = blob.type || 'image/png'
+  const path = `${familyId}/about-hero`
+  const up = await supabase.storage
+    .from('child-photos')
+    .upload(path, blob, { upsert: true, contentType })
+  if (up.error) throw new Error(`[supabase] ${up.error.message}`)
+  const { data } = supabase.storage.from('child-photos').getPublicUrl(path)
+  return `${data.publicUrl}?v=${Date.now()}` // cache-bust so updates show
+}
+
+/** Upload a blog banner photo; unique path so each post keeps its own image. */
+export async function uploadBlogPhoto(familyId: string, dataUrl: string): Promise<string> {
+  const blob = await (await fetch(dataUrl)).blob()
+  const contentType = blob.type || 'image/png'
+  const path = `${familyId}/blog-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
+  const up = await supabase.storage
+    .from('child-photos')
+    .upload(path, blob, { upsert: true, contentType })
+  if (up.error) throw new Error(`[supabase] ${up.error.message}`)
+  const { data } = supabase.storage.from('child-photos').getPublicUrl(path)
+  return `${data.publicUrl}?v=${Date.now()}`
 }
 
 /* ------------------------------------------------------------------ */

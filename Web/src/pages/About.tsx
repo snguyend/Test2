@@ -1,179 +1,426 @@
 import { useState } from 'react'
+import type { ChangeEvent, ReactNode } from 'react'
+import CollapsibleSection from '../components/CollapsibleSection'
+import { useAppData } from '../store-context'
+import type { AboutContent } from '../types'
 
-const CONTACT_CARDS = [
-  { icon: '📞', label: 'Phone', value: '0979431362', href: 'tel:0979431362' },
-  {
-    icon: '✉️',
-    label: 'Email',
-    value: 'dinhsonnokia@outlook.com',
-    href: 'mailto:dinhsonnokia@outlook.com',
-  },
-  {
-    icon: '📍',
-    label: 'Social / Address',
-    value: 'Tri Qua Ward - Bac Ninh Province, Vietnam',
-    href: 'https://maps.google.com/?q=Tri+Qua+Ward,+Bac+Ninh+Province,+Vietnam',
-  },
+/** Render editable multiline text: blank lines split paragraphs, "- " lines become bullets. */
+function renderRich(text: string): ReactNode {
+  const blocks: ReactNode[] = []
+  let bullets: string[] = []
+  let key = 0
+  const flush = () => {
+    if (bullets.length) {
+      const items = bullets
+      blocks.push(
+        <ul key={`ul-${key++}`}>
+          {items.map((b, i) => (
+            <li key={i}>{b}</li>
+          ))}
+        </ul>,
+      )
+      bullets = []
+    }
+  }
+  for (const raw of text.split('\n')) {
+    const line = raw.trim()
+    if (!line) {
+      flush()
+      continue
+    }
+    if (line.startsWith('- ')) {
+      bullets.push(line.slice(2))
+      continue
+    }
+    flush()
+    blocks.push(<p key={`p-${key++}`}>{line}</p>)
+  }
+  flush()
+  return blocks
+}
+
+/** Original family + growth illustration for the hero (self-contained SVG). */
+function FamilyIllustration() {
+  return (
+    <svg
+      viewBox="0 0 360 220"
+      width="100%"
+      style={{ maxWidth: 360 }}
+      role="img"
+      aria-label="A growing family"
+    >
+      <rect x="0" y="0" width="360" height="220" rx="24" fill="#fef9f0" />
+      <g fill="#cbd5e1">
+        <circle cx="40" cy="34" r="3" />
+        <circle cx="322" cy="40" r="3" />
+        <circle cx="300" cy="150" r="3" />
+      </g>
+      {/* parent (left) */}
+      <g>
+        <circle cx="86" cy="84" r="26" fill="#f4c58c" />
+        <path d="M60 84a26 26 0 0 1 52 0z" fill="#1f3a5f" />
+        <rect x="58" y="112" width="56" height="86" rx="20" fill="#ef6a5a" />
+      </g>
+      {/* child (middle) */}
+      <g>
+        <circle cx="180" cy="104" r="20" fill="#f4c58c" />
+        <path d="M160 104a20 20 0 0 1 40 0z" fill="#1f3a5f" />
+        <rect x="156" y="126" width="48" height="72" rx="16" fill="#f59e0b" />
+      </g>
+      {/* parent (right) */}
+      <g>
+        <circle cx="274" cy="84" r="26" fill="#f4c58c" />
+        <path d="M248 84a26 26 0 0 1 52 0z" fill="#1f3a5f" />
+        <rect x="246" y="112" width="56" height="86" rx="20" fill="#14b8a6" />
+      </g>
+      {/* growth board */}
+      <g>
+        <rect x="120" y="150" width="120" height="58" rx="10" fill="#ffffff" stroke="#e5e7eb" />
+        <polyline
+          points="132,192 156,178 180,184 204,160 228,166"
+          fill="none"
+          stroke="#22c55e"
+          strokeWidth="4"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        />
+        <circle cx="228" cy="166" r="4" fill="#22c55e" />
+      </g>
+    </svg>
+  )
+}
+
+/** The Launch Trajectory life stages. */
+const LAUNCH_STAGES = [
+  { name: 'Foundation', ages: '0–6', focus: 'Security & Exploration', role: 'Builder', color: '#22c55e' },
+  { name: 'Formation', ages: '7–12', focus: 'Competence & Character', role: 'Coach', color: '#f59e0b' },
+  { name: 'Ignition', ages: '13–18', focus: 'Identity & Agency', role: 'Guide', color: '#f97316' },
 ]
 
-const FAQ_ITEMS = [
-  {
-    q: 'What is Education Growth?',
-    a: 'Education Growth is a simple family learning tracker. It helps parents keep all of their children’s school results in one place, so you can see how each child is doing and celebrate their progress together.',
-  },
-  {
-    q: 'Who is this app for?',
-    a: 'It’s made for parents and families who want an easy way to follow their children’s learning at home — no teacher account, no complicated setup. If you can type a score, you can use it.',
-  },
-  {
-    q: 'How do I add and track my children’s scores?',
-    a: 'Go to the “Add Score” page, pick the child, choose the grade and subject, and enter a score from 0 to 10. The Dashboard and each child’s page update automatically so you always see their latest averages.',
-  },
-  {
-    q: 'What do the grades and tabs mean?',
-    a: 'Each score is saved under the school grade it was earned in (for example Grade 8). On a child’s detail page you can switch between grades to see results year by year, which makes it easy to track long-term progress.',
-  },
-  {
-    q: 'How do goals and rewards work?',
-    a: 'You can set simple goals for each child, like “Score 9 in Math.” When a goal is completed you can mark it done and give a reward, which helps keep learning fun and motivating.',
-  },
-  {
-    q: 'Where is my family’s data stored?',
-    a: 'Everything stays in your own browser on this device. There is no sign-up and nothing is sent to a server, so your family’s information stays private to you.',
-  },
+/** The six “Launch Systems” that support healthy growth. */
+const LAUNCH_SYSTEMS = [
+  { icon: '❤️', name: 'The Base', desc: 'A foundation of trust and belonging that makes growth possible.', color: '#ef4444' },
+  { icon: '⚡', name: 'The Engine', desc: 'Intrinsic motivation and curiosity that fuels lifelong learning.', color: '#f59e0b' },
+  { icon: '🛡️', name: 'The Shield', desc: 'The ability to bounce back from setbacks and learn from failure.', color: '#22c55e' },
+  { icon: '🧭', name: 'The Navigation', desc: 'Critical thinking and decision-making skills for complex choices.', color: '#f97316' },
+  { icon: '🏰', name: 'The Structure', desc: 'Integrity, responsibility, and values that guide behavior.', color: '#334155' },
+  { icon: '⭐', name: 'The Mission', desc: 'A sense of purpose and the drive to make a meaningful impact.', color: '#8b5cf6' },
 ]
 
 export default function About() {
-  const [name, setName] = useState('')
-  const [email, setEmail] = useState('')
-  const [subject, setSubject] = useState('')
-  const [message, setMessage] = useState('')
-  const [sent, setSent] = useState(false)
-  const [error, setError] = useState('')
-  const [openFaq, setOpenFaq] = useState<number | null>(0)
+  const { aboutContent, updateAboutContent, uploadAboutPhoto, remote } = useAppData()
+  const [editing, setEditing] = useState(false)
+  const [draft, setDraft] = useState<AboutContent>(aboutContent)
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault()
-    if (!name.trim() || !email.trim() || !message.trim()) {
-      setError('Please fill in your name, email and message.')
-      return
+  const startEdit = () => {
+    setDraft(aboutContent)
+    setEditing(true)
+  }
+  const save = () => {
+    updateAboutContent(draft)
+    setEditing(false)
+  }
+  const setField = (k: keyof AboutContent, v: string) =>
+    setDraft((d) => ({ ...d, [k]: v }))
+
+  const setPos = (x: number, y: number) =>
+    setDraft((d) => ({ ...d, heroImagePosition: `${x}% ${y}%` }))
+
+  const handlePhoto = (e: ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+    const reader = new FileReader()
+    reader.onload = async () => {
+      const dataUrl = reader.result as string
+      try {
+        const url = await uploadAboutPhoto(dataUrl)
+        setDraft((d) => ({ ...d, heroImageUrl: url }))
+      } catch (err) {
+        console.error('[about] photo upload failed', err)
+        setDraft((d) => ({ ...d, heroImageUrl: dataUrl }))
+      }
     }
-    setError('')
-    setSent(true)
-    setName('')
-    setEmail('')
-    setSubject('')
-    setMessage('')
+    reader.readAsDataURL(file)
+  }
+
+  if (editing) {
+    const longFields: [keyof AboutContent, string][] = [
+      ['heroBody', 'Hero intro'],
+      ['vision', 'Our Vision'],
+      ['mission', 'Our Mission'],
+      ['why', 'Why We Exist'],
+      ['who', 'Who We Serve'],
+      ['how', 'How We Help'],
+      ['outcome', 'The Outcome'],
+    ]
+    const posParts = (draft.heroImagePosition ?? '50% 50%').split(' ')
+    const px = Number.parseInt(posParts[0] ?? '', 10) || 50
+    const py = Number.parseInt(posParts[1] ?? '', 10) || 50
+    return (
+      <div className="page">
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12 }}>
+          <h1 style={{ margin: 0 }}>Edit About page</h1>
+          <div style={{ marginLeft: 'auto', display: 'flex', gap: 8 }}>
+            <button type="button" className="btn" onClick={save}>
+              Save
+            </button>
+            <button
+              type="button"
+              className="btn"
+              style={{ background: '#e5e7eb', color: '#111827' }}
+              onClick={() => setEditing(false)}
+            >
+              Cancel
+            </button>
+          </div>
+        </div>
+        {!remote && (
+          <p className="muted" style={{ marginTop: 0 }}>
+            Changes save on this device. Run <code>supabase/about.sql</code> to share edits with the
+            whole family.
+          </p>
+        )}
+        <div className="card" style={{ display: 'grid', gap: 14 }}>
+          <div style={{ display: 'grid', gap: 8 }}>
+            <span className="muted" style={{ fontSize: 13 }}>Hero picture</span>
+            {draft.heroImageUrl ? (
+              <>
+                <img
+                  src={draft.heroImageUrl}
+                  alt="Hero preview"
+                  style={{
+                    width: 260,
+                    aspectRatio: '16 / 11',
+                    objectFit: 'cover',
+                    objectPosition: draft.heroImagePosition ?? 'center',
+                    borderRadius: 14,
+                    display: 'block',
+                  }}
+                />
+                <div style={{ display: 'grid', gap: 6, maxWidth: 260 }}>
+                  <label style={{ display: 'grid', gap: 2 }}>
+                    <span className="muted" style={{ fontSize: 12 }}>Move left ↔ right</span>
+                    <input
+                      type="range"
+                      min={0}
+                      max={100}
+                      value={px}
+                      onChange={(e) => setPos(Number(e.target.value), py)}
+                    />
+                  </label>
+                  <label style={{ display: 'grid', gap: 2 }}>
+                    <span className="muted" style={{ fontSize: 12 }}>Move up ↕ down</span>
+                    <input
+                      type="range"
+                      min={0}
+                      max={100}
+                      value={py}
+                      onChange={(e) => setPos(px, Number(e.target.value))}
+                    />
+                  </label>
+                </div>
+              </>
+            ) : (
+              <span className="muted" style={{ fontSize: 13 }}>
+                No photo yet — the illustration is shown. Add your family photo below.
+              </span>
+            )}
+            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+              <label className="btn" style={{ cursor: 'pointer' }}>
+                📷 {draft.heroImageUrl ? 'Change picture' : 'Add picture'}
+                <input type="file" accept="image/*" hidden onChange={handlePhoto} />
+              </label>
+              {draft.heroImageUrl && (
+                <button
+                  type="button"
+                  className="btn"
+                  style={{ background: '#e5e7eb', color: '#111827' }}
+                  onClick={() => setField('heroImageUrl', '')}
+                >
+                  Remove photo
+                </button>
+              )}
+            </div>
+          </div>
+          <label style={{ display: 'grid', gap: 4 }}>
+            <span className="muted" style={{ fontSize: 13 }}>Hero title</span>
+            <input value={draft.heroTitle} onChange={(e) => setField('heroTitle', e.target.value)} />
+          </label>
+          {longFields.map(([k, label]) => (
+            <label key={k} style={{ display: 'grid', gap: 4 }}>
+              <span className="muted" style={{ fontSize: 13 }}>{label}</span>
+              <textarea
+                value={draft[k]}
+                onChange={(e) => setField(k, e.target.value)}
+                rows={k === 'heroBody' || k === 'vision' || k === 'mission' ? 4 : 7}
+                style={{ resize: 'vertical' }}
+              />
+            </label>
+          ))}
+          <p className="muted" style={{ margin: 0, fontSize: 13 }}>
+            Tip: leave a blank line between paragraphs. Start a line with “- ” to make a bullet.
+          </p>
+        </div>
+      </div>
+    )
   }
 
   return (
     <div className="page">
-      <section className="hero contact-hero">
-        <div className="hero-text">
-          <h1>Contact Us</h1>
-          <p>Home » About Us</p>
+      <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 8 }}>
+        <button type="button" className="btn" onClick={startEdit}>
+          ✏️ Edit page
+        </button>
+      </div>
+
+      {/* ===== Hero ===== */}
+      <section
+        className="card"
+        style={{
+          padding: 28,
+          background: 'linear-gradient(135deg, #ecfdf5, #eff6ff)',
+          display: 'grid',
+          gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))',
+          gap: 20,
+          alignItems: 'center',
+        }}
+      >
+        <div>
+          {aboutContent.heroImageUrl ? (
+            <img
+              src={aboutContent.heroImageUrl}
+              alt="Our family"
+              style={{
+                width: '100%',
+                maxWidth: 360,
+                aspectRatio: '16 / 11',
+                objectFit: 'cover',
+                objectPosition: aboutContent.heroImagePosition ?? 'center',
+                borderRadius: 20,
+                display: 'block',
+              }}
+            />
+          ) : (
+            <FamilyIllustration />
+          )}
+        </div>
+        <div>
+          <h1 style={{ margin: '0 0 12px' }}>{aboutContent.heroTitle}</h1>
+          <p className="muted" style={{ margin: 0, lineHeight: 1.7, fontSize: 16 }}>
+            {aboutContent.heroBody}
+          </p>
         </div>
       </section>
 
-      <p className="contact-intro">
-        Feel free to share your feedback as well as any queries or complaints regarding any content
-        on our website and in the page. Send us a mail or simply fill the form given below. We will
-        be there to help you!
-      </p>
+      {/* ===== The Launch Trajectory ===== */}
+      <section style={{ marginTop: 28 }}>
+        <h2 style={{ textAlign: 'center', marginBottom: 4 }}>
+          Our Unique System — The Launch Trajectory
+        </h2>
+        <p className="muted" style={{ textAlign: 'center', margin: '0 auto 16px', maxWidth: 620 }}>
+          A guided path across three life stages, ending in a confident, independent young adult.
+        </p>
 
-      <div className="contact-cards">
-        {CONTACT_CARDS.map((c) => (
-          <a
-            key={c.label}
-            className="card contact-card"
-            href={c.href}
-            target={c.href.startsWith('http') ? '_blank' : undefined}
-            rel={c.href.startsWith('http') ? 'noreferrer' : undefined}
+        <div
+          style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
+            gap: 16,
+          }}
+        >
+          {LAUNCH_STAGES.map((s) => (
+            <div key={s.name} className="card" style={{ borderTop: `4px solid ${s.color}` }}>
+              <h3 style={{ margin: '0 0 4px' }}>
+                {s.name}{' '}
+                <span className="muted" style={{ fontWeight: 400, fontSize: 14 }}>({s.ages})</span>
+              </h3>
+              <p className="muted" style={{ margin: '0 0 10px' }}>{s.focus}</p>
+              <span
+                style={{
+                  fontSize: 12,
+                  fontWeight: 700,
+                  color: s.color,
+                  background: `color-mix(in srgb, ${s.color} 14%, #ffffff)`,
+                  borderRadius: 999,
+                  padding: '3px 10px',
+                }}
+              >
+                Parent&apos;s role: {s.role}
+              </span>
+            </div>
+          ))}
+          <div
+            className="card"
+            style={{
+              borderTop: '4px solid #64748b',
+              display: 'flex',
+              flexDirection: 'column',
+              justifyContent: 'center',
+            }}
           >
-            <span className="contact-icon">
-              <span className="contact-glyph">{c.icon}</span>
-            </span>
-            <span className="contact-label">{c.label}</span>
-            <span className="contact-value">{c.value}</span>
-          </a>
-        ))}
+            <div style={{ fontSize: 30 }} aria-hidden>🚀</div>
+            <h3 style={{ margin: '4px 0' }}>Launch Goal</h3>
+            <p className="muted" style={{ margin: 0, fontSize: 14 }}>
+              A confident, capable, self-reliant young adult ready for successful independence.
+            </p>
+          </div>
+        </div>
+
+        <h3 style={{ textAlign: 'center', marginTop: 24 }}>The Six Launch Systems</h3>
+        <div
+          style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
+            gap: 14,
+            marginTop: 12,
+          }}
+        >
+          {LAUNCH_SYSTEMS.map((s) => (
+            <div key={s.name} className="card" style={{ borderLeft: `4px solid ${s.color}` }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <span style={{ fontSize: 20 }} aria-hidden>{s.icon}</span>
+                <strong>{s.name}</strong>
+              </div>
+              <p className="muted" style={{ margin: '6px 0 0', fontSize: 14 }}>{s.desc}</p>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      {/* ===== Vision & Mission ===== */}
+      <div
+        style={{
+          display: 'grid',
+          gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
+          gap: 16,
+          marginTop: 28,
+        }}
+      >
+        <section className="card" style={{ background: '#ecfdf5' }}>
+          <h2 style={{ marginTop: 0 }}>🌏 Our Vision</h2>
+          <p style={{ margin: 0, lineHeight: 1.7 }}>{aboutContent.vision}</p>
+        </section>
+        <section className="card" style={{ background: '#ecfdf5' }}>
+          <h2 style={{ marginTop: 0 }}>🎯 Our Mission</h2>
+          <p style={{ margin: 0, lineHeight: 1.7 }}>{aboutContent.mission}</p>
+        </section>
       </div>
 
-      <h2 className="get-in-touch">Get in Touch</h2>
-
-      <form className="card form contact-form" onSubmit={handleSubmit}>
-        {sent && (
-          <p className="success">✅ Thanks! Your message has been sent. We'll get back to you soon.</p>
-        )}
-
-        <div className="form-row">
-          <label>
-            Name
-            <input
-              type="text"
-              value={name}
-              placeholder="Your name"
-              onChange={(e) => setName(e.target.value)}
-            />
-          </label>
-          <label>
-            Email
-            <input
-              type="email"
-              value={email}
-              placeholder="you@example.com"
-              onChange={(e) => setEmail(e.target.value)}
-            />
-          </label>
-        </div>
-
-        <label>
-          Subject
-          <input
-            type="text"
-            value={subject}
-            placeholder="How can we help?"
-            onChange={(e) => setSubject(e.target.value)}
-          />
-        </label>
-
-        <label>
-          Message
-          <textarea
-            value={message}
-            rows={5}
-            placeholder="Write your message…"
-            onChange={(e) => setMessage(e.target.value)}
-          />
-        </label>
-
-        {error && <p className="error">{error}</p>}
-
-        <button type="submit" className="btn primary">
-          Submit
-        </button>
-      </form>
-
-      <section className="faq">
-        <h2 className="faq-title">Frequently asked questions</h2>
-        <div className="faq-list">
-          {FAQ_ITEMS.map((item, i) => {
-            const open = openFaq === i
-            return (
-              <div key={item.q} className={open ? 'faq-item open' : 'faq-item'}>
-                <button
-                  className="faq-question"
-                  onClick={() => setOpenFaq(open ? null : i)}
-                  aria-expanded={open}
-                >
-                  <span>{item.q}</span>
-                  <span className="faq-chevron">{open ? '⌃' : '⌄'}</span>
-                </button>
-                {open && <p className="faq-answer">{item.a}</p>}
-              </div>
-            )
-          })}
-        </div>
+      {/* ===== Detail sections (collapsible) ===== */}
+      <section style={{ marginTop: 28 }}>
+        <h2 style={{ marginBottom: 12 }}>Learn more</h2>
+        <CollapsibleSection title="Why We Exist" icon="❓" color="#f59e0b" defaultOpen>
+          {renderRich(aboutContent.why)}
+        </CollapsibleSection>
+        <CollapsibleSection title="Who We Serve" icon="👨‍👩‍👧‍👦" color="#0891b2">
+          {renderRich(aboutContent.who)}
+        </CollapsibleSection>
+        <CollapsibleSection title="How We Help" icon="🤝" color="#16a34a">
+          {renderRich(aboutContent.how)}
+        </CollapsibleSection>
+        <CollapsibleSection title="The Outcome" icon="🌟" color="#8b5cf6">
+          {renderRich(aboutContent.outcome)}
+        </CollapsibleSection>
       </section>
     </div>
   )

@@ -13,6 +13,8 @@
 export type MemberRole = 'owner' | 'parent' | 'guardian' | 'viewer'
 export type Semester = 'first' | 'second'
 
+import type { AboutContent } from '../types'
+
 /** Generic helper for a table with distinct Row / Insert / Update shapes. */
 // Row types below are `type` aliases (not `interface`) on purpose — object
 // `interface`s do not satisfy `Record<string, unknown>`, which would make
@@ -166,6 +168,38 @@ export type DailyCheckinRow = {
   created_at: string
 }
 
+export type HomeworkRow = {
+  id: string
+  child_id: string
+  title: string
+  subject: string | null
+  description: string | null
+  due_date: string | null
+  done: boolean
+  done_at: string | null
+  created_at: string
+}
+
+export type BlogPostRow = {
+  id: string
+  family_id: string
+  title: string
+  excerpt: string | null
+  date_label: string | null
+  read_mins: number
+  emoji: string | null
+  color: string | null
+  tag: string | null
+  image_url: string | null
+  created_at: string
+}
+
+export type AboutContentRow = {
+  family_id: string
+  content: AboutContent
+  updated_at: string
+}
+
 /* ------------------------------------------------------------------ */
 /* Insert / Update helpers                                             */
 /* ------------------------------------------------------------------ */
@@ -180,7 +214,7 @@ type InsertOf<Row, Optional extends keyof Row = never> = Flatten<
   Omit<Row, Generated | Optional> & Partial<Pick<Row, (Generated | Optional) & keyof Row>>
 >
 
-type UpdateOf<Row> = Flatten<Partial<Omit<Row, 'id' | 'created_at'>>>
+export type UpdateOf<Row> = Flatten<Partial<Omit<Row, 'id' | 'created_at'>>>
 
 /* ------------------------------------------------------------------ */
 /* Database interface for createClient<Database>()                     */
@@ -260,6 +294,24 @@ export type Database = {
         DailyCheckinRow,
         InsertOf<DailyCheckinRow>,
         UpdateOf<DailyCheckinRow>
+      >
+      homework: TableShape<
+        HomeworkRow,
+        InsertOf<HomeworkRow, 'subject' | 'description' | 'due_date' | 'done' | 'done_at'>,
+        UpdateOf<HomeworkRow>
+      >
+      blog_posts: TableShape<
+        BlogPostRow,
+        InsertOf<
+          BlogPostRow,
+          'excerpt' | 'date_label' | 'read_mins' | 'emoji' | 'color' | 'tag' | 'image_url'
+        >,
+        UpdateOf<BlogPostRow>
+      >
+      about_content: TableShape<
+        AboutContentRow,
+        InsertOf<AboutContentRow, 'updated_at'>,
+        UpdateOf<AboutContentRow>
       >
     }
     Views: Record<string, never>

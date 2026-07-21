@@ -2,15 +2,15 @@ import { useState } from 'react'
 import { NavLink } from 'react-router-dom'
 import Particles from './Particles'
 import AuthModal from './AuthModal'
-import BrandLogo from './BrandLogo'
 import { useAuth } from '../auth-context'
+import { PUBLIC_FAMILY_ID } from '../lib/supabase'
 
 const navItems = [
   { label: 'Home', to: '/', end: true, icon: '🏠' },
   { label: 'Courses', to: '/courses', icon: '📚' },
   { label: 'About', to: '/about', icon: '💡' },
-  { label: 'Blog', to: '/goals', icon: '✍️' },
-  { label: 'Contact', to: '/about', icon: '✉️' },
+  { label: 'Blog', to: '/blog', icon: '✍️' },
+  { label: 'Contact', to: '/contact', icon: '✉️' },
 ]
 
 export default function Header() {
@@ -21,9 +21,7 @@ export default function Header() {
     <header className="site-header">
       <Particles className="particles-bar" />
       <div className="site-brand">
-        <span className="site-logo">
-          <BrandLogo className="site-logo-svg" />
-        </span>
+        <span className="site-logo">🌱</span>
       </div>
 
       <nav className="site-nav">
@@ -43,7 +41,13 @@ export default function Header() {
       </nav>
 
       <div className="site-actions">
-        {user ? (
+        {PUBLIC_FAMILY_ID ? (
+          // No-login public sharing: everyone is the shared family, so no auth UI.
+          <span className="site-account-badge" title="Shared with your family">
+            <span className="site-account-avatar">☁️</span>
+            <span className="site-account-email">Family</span>
+          </span>
+        ) : user ? (
           <div className="site-account">
             <span className="site-account-badge" title={user.email ?? 'Signed in'}>
               <span className="site-account-avatar">
